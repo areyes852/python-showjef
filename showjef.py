@@ -24,7 +24,9 @@ class Pattern:
         d = open(path).read()
         start = struct.unpack("<h", d[:2])[0]
         data = d[start:]
-        self.threads = data.split("\x80\x01")
+        self.threads = map(
+            lambda thread: thread[2:], data.split("\x80\x01")
+            )
         self.x, self.y = 0, 0
         
         self.colours = []
@@ -37,24 +39,29 @@ class Pattern:
     def show_coords(self, coords, pen, scene):
     
         first = True
+        command = False
         i = 0
         while i < len(coords):
+        
             if coords[i:i+2] == "\x80\x02":
                 i += 2
-                self.x += struct.unpack("<b", coords[i])[0]
-                self.y += struct.unpack("<b", coords[i+1])[0]
-                i += 2
-                x, y = self.x, self.y
-                continue
-            if coords[i:i+2] == "\x80\x10":
+                command = True
+                first = True
+            elif coords[i:i+2] == "\x80\x10":
                 break
+            else:
+                command = False
+            
             self.x += struct.unpack("<b", coords[i])[0]
             self.y += struct.unpack("<b", coords[i+1])[0]
-            ellipse = scene.addEllipse(self.x, -self.y, 4, 4, QPen(QColor(200,200,200)))
-            if not first:
-                scene.addLine(x, -y, self.x, -self.y, pen)
-            else:
-                first = False
+            
+            if not command:
+                if not first:
+                    scene.addLine(x, -y, self.x, -self.y, pen)
+                    scene.addEllipse(self.x, -self.y, 4, 4, QPen(QColor(200,200,200)))
+                else:
+                    first = False
+            
             x, y = self.x, self.y
             i += 2
     
@@ -82,6 +89,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     scene = QGraphicsScene()
     view = QGraphicsView()
+    view.setRenderHint(QPainter.Antialiasing)
     view.setScene(scene)
     view.show()
     
