@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-showjef.py - Display the contents of JEF files.
+jef2svg.py - Converts the contents of JEF files to SVG images.
 
 Copyright (C) 2009 David Boddie <david.boddie@nokia.com>
 
@@ -19,8 +19,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import struct, sys
+import os, struct, sys
+from PyQt4.QtCore import QRect
 from PyQt4.QtGui import *
+from PyQt4.QtSvg import QSvgGenerator
 
 ColorTable = {
     0x0a: QColor(255, 0, 0),
@@ -65,11 +67,24 @@ class Pattern:
         for i in range(colours):
             self.colours.append(struct.unpack("<i", d[offset:offset+4])[0])
             offset += 4
+        
+        self.coordinates = []
+        i = 0
+        for thread in self.threads:
+            try:
+                identifier = self.colours[i]
+                colour = ColorTable[identifier]
+            except KeyError:
+                colour = QColor(0, 0, 0)
+                sys.stderr.write("Failed to find colour 0x%02x (%i).\n" % (identifier, identifier))
+            self.coordinates.append(self.read_coords(thread))
+            i += 1
     
-    def show_coords(self, coords, pen, scene):
+    def read_coords(self, coords):
     
         first = True
         command = False
+        coordinates = []
         i = 0
         while i < len(coords):
         
@@ -87,15 +102,26 @@ class Pattern:
             
             if not command:
                 if not first:
-                    scene.addLine(x, -y, self.x, -self.y, pen)
-                    scene.addEllipse(self.x - 2, -self.y - 2, 4, 4, QPen(QColor(200,200,200)))
+                    coordinates.append((x, y))
+                    coordinates.append((self.x, self.y))
                 else:
                     first = False
             
             x, y = self.x, self.y
             i += 2
+        
+        return coordinates
     
-    def show(self, scene):
+    def bounding_rect(self):
+    
+        x, y = [], []
+        for coordinates in self.coordinates:
+            x.extend(map(lambda (i, j): i, coordinates))
+            y.extend(map(lambda (i, j): j, coordinates))
+        
+        return QRect(min(x), -max(y), max(x) - min(x), max(y) - min(y))
+    
+    def show(self, painter):
     
         i = 0
         for thread in self.threads:
@@ -105,24 +131,47 @@ class Pattern:
             except KeyError:
                 colour = QColor(0, 0, 0)
                 sys.stderr.write("Failed to find colour 0x%02x (%i).\n" % (identifier, identifier))
+            
+            coordinates = self.coordinates[i]
+            
+            pen = QPen(QColor(200, 200, 200))
+            painter.setPen(pen)
+            
+            for j in range(len(coordinates)):
+                painter.drawEllipse(coordinates[j][0]-2, -coordinates[j][1]-2, 4, 4)
+            
             pen = QPen(colour)
-            self.show_coords(thread, pen, scene)
+            painter.setPen(pen)
+            
+            for j in range(0, len(coordinates), 2):
+                painter.drawLine(coordinates[j][0], -coordinates[j][1],
+                                 coordinates[j + 1][0], -coordinates[j + 1][1])
+            
             i += 1
 
 
 if __name__ == "__main__":
 
-    if len(sys.argv) != 2:
-        sys.stderr.write("Usage: %s <JEF file>\n" % sys.argv[0])
+    if len(sys.argv) != 3:
+        sys.stderr.write("Usage: %s <JEF file> <SVG file>\n" % sys.argv[0])
         sys.exit(1)
     
     app = QApplication(sys.argv)
-    scene = QGraphicsScene()
-    view = QGraphicsView()
-    view.setRenderHint(QPainter.Antialiasing)
-    view.setScene(scene)
-    view.show()
+    svg = QSvgGenerator()
+    svg.setFileName(sys.argv[2])
+    svg.setDescription(
+        'Original JEF file "' + os.path.split(sys.argv[1])[1] + '" converted '
+        'to ' + os.path.split(sys.argv[2])[1] + ' by jef2svg.py.'
+        )
     
     p = Pattern(sys.argv[1])
-    p.show(scene)
-    sys.exit(app.exec_())
+    rect = p.bounding_rect()
+    svg.setViewBox(rect)
+    svg.setSize(rect.size())
+    
+    painter = QPainter()
+    painter.begin(svg)
+    p.show(painter)
+    painter.end()
+    
+    sys.exit()
