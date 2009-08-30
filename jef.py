@@ -68,24 +68,27 @@ class Pattern:
     def read_threads(self, data):
     
         self.coordinates = []
-        self.x, self.y = 0, 0
+        x, y = 0, 0
         
         coordinates = []
+        first = True
         i = 0
         
         while i < len(data):
         
             if data[i:i+2] == "\x80\x01":
                 # Starting a new thread. Record the coordinates already read
-                # and skip the two bytes following this control code.
+                # and skip the next two bytes.
                 self.coordinates.append(coordinates)
                 coordinates = []
+                first = True
                 i += 4
                 continue
             elif data[i:i+2] == "\x80\x02":
                 # Move command.
                 i += 2
                 command = "move"
+                first = True
             elif data[i:i+2] == "\x80\x10":
                 # End of data.
                 self.coordinates.append(coordinates)
@@ -93,10 +96,17 @@ class Pattern:
             else:
                 command = "stitch"
             
-            self.x += struct.unpack("<b", data[i])[0]
-            self.y += struct.unpack("<b", data[i+1])[0]
+            x += struct.unpack("<b", data[i])[0]
+            y += struct.unpack("<b", data[i+1])[0]
             
-            coordinates.append((command, self.x, self.y))
+            if command == "move":
+                coordinates.append((command, x, y))
+            elif first:
+                coordinates.append(("move", x, y))
+                first = False
+            else:
+                coordinates.append((command, x, y))
+            
             i += 2
     
     def colour_for_thread(self, index):

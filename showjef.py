@@ -3,7 +3,7 @@
 """
 showjef.py - Display the contents of JEF files.
 
-Copyright (C) 2009 David Boddie <david.boddie@nokia.com>
+Copyright (C) 2009 David Boddie <david@boddie.org.uk>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
