@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import struct, sys
 from PyQt4.QtGui import *
 
+import jef
+
 ColorTable = {
     0x0a: QColor(255, 0, 0),
     0x3c: QColor(0, 0, 255),
@@ -47,66 +49,33 @@ ColorTable = {
     0x2e: QColor(0, 57, 37),
     }
 
-class Pattern:
+class Convertor:
 
     def __init__(self, path):
     
-        d = open(path).read()
-        start = struct.unpack("<h", d[:2])[0]
-        data = d[start:]
-        self.threads = map(
-            lambda thread: thread[2:], data.split("\x80\x01")
-            )
-        self.x, self.y = 0, 0
-        
-        self.colours = []
-        colours = (start - 0x74)/8
-        offset = 0x74
-        for i in range(colours):
-            self.colours.append(struct.unpack("<i", d[offset:offset+4])[0])
-            offset += 4
+        self.jef = jef.Pattern(path)
     
     def show_coords(self, coords, pen, scene):
     
-        first = True
-        command = False
-        i = 0
-        while i < len(coords):
+        mx, my = 0, 0
+        for op, x, y in coords:
         
-            if coords[i:i+2] == "\x80\x02":
-                i += 2
-                command = True
-                first = True
-            elif coords[i:i+2] == "\x80\x10":
-                break
-            else:
-                command = False
+            scene.addEllipse(x - 2, -y - 2, 4, 4, QPen(QColor(200,200,200)))
             
-            self.x += struct.unpack("<b", coords[i])[0]
-            self.y += struct.unpack("<b", coords[i+1])[0]
+            if op == "stitch":
+                scene.addLine(mx, -my, x, -y, pen)
             
-            if not command:
-                if not first:
-                    scene.addLine(x, -y, self.x, -self.y, pen)
-                    scene.addEllipse(self.x - 2, -self.y - 2, 4, 4, QPen(QColor(200,200,200)))
-                else:
-                    first = False
-            
-            x, y = self.x, self.y
-            i += 2
+            mx, my = x, y
     
     def show(self, scene):
     
         i = 0
-        for thread in self.threads:
-            try:
-                identifier = self.colours[i]
-                colour = ColorTable[identifier]
-            except KeyError:
-                colour = QColor(0, 0, 0)
-                sys.stderr.write("Failed to find colour 0x%02x (%i).\n" % (identifier, identifier))
+        for thread in range(self.jef.threads):
+        
+            colour = QColor(*self.jef.colour_for_thread(i))
             pen = QPen(colour)
-            self.show_coords(thread, pen, scene)
+            coordinates = self.jef.coordinates[i]
+            self.show_coords(coordinates, pen, scene)
             i += 1
 
 
@@ -123,6 +92,6 @@ if __name__ == "__main__":
     view.setScene(scene)
     view.show()
     
-    p = Pattern(sys.argv[1])
-    p.show(scene)
+    convertor = Convertor(sys.argv[1])
+    convertor.show(scene)
     sys.exit(app.exec_())

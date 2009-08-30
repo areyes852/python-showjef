@@ -58,11 +58,15 @@ class Convertor:
             pen = QPen(colour)
             painter.setPen(pen)
             
-            mx, my = 0, 0
+            path = QPainterPath()
             for op, x, y in coordinates:
-                if op == "stitch":
-                    painter.drawLine(mx, -my, x, -y)
-                mx, my = x, y
+                if op == "move":
+                    path.moveTo(x, -y)
+                elif op == "stitch":
+                    path.lineTo(x, -y)
+            
+            if path.elementCount() > 0:
+                painter.drawPath(path)
             
             i += 1
 
