@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import struct, sys
+import struct, sys, time
 
 ColorTable = {
     0x0a: (255, 0, 0),
@@ -54,6 +54,13 @@ class Pattern:
         start = struct.unpack("<I", d[:4])[0]
         data = d[start:]
         self.threads = struct.unpack("<I", d[24:28])[0]
+        data_length = struct.unpack("<I", d[28:32])[0]
+        
+        # start + data_length should equal the file length.
+        
+        self.date_time = None
+        if struct.unpack("<I", d[4:8])[0] & 1:
+            self.date_time = time.strptime(d[8:22], "%Y%m%d%H%M%S")
         
         # The colour table always seems to start at offset 0x74.
         self.colours = []
