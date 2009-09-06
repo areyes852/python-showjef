@@ -22,28 +22,55 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import struct, sys, time
 
 ColorTable = {
-    0x0a: (255, 0, 0),
-    0x3c: (0, 0, 255),
-    0x02: (255, 255, 255),
-    0x28: (200, 0, 0),
-    0x44: (255, 240, 142),
-    0x24: (200, 160, 0),
+    0x01: (0, 0, 0), # Black
+    0x02: (254, 254, 254), # see table
+    0x03: (249, 237, 5), # Gold Yellow
+    0x05: (67, 86, 7), # see table
+    0x06: (49, 125, 37), # see table
+    0x08: (146, 96, 172), # see table
+    0x0a: (254, 0, 0), # see table
+    0x0b: (180, 78, 100), # see table
+    0x0c: (35, 54, 114), # see table
+    0x0d: (227, 243, 93), # see table
+    0x0e: (68, 35, 4), # see table
+    0x0f: (195, 189, 191), # some kind of silver (estimated)
+    0x10: (255, 227, 197), # see table
+    0x12: (244, 165, 132), # see table
+    0x13: (184, 176, 139), # some kind of tan (estimated)
+    0x14: (147, 5, 3), # see table
+    0x15: (177, 176, 211), # see table
+    0x17: (250, 218, 223), # see table
+    0x18: (162, 162, 190), # some kind of light blue (estimated)
+    0x1a: (155, 217, 235), # see table
+    0x1c: (101, 154, 214), # see table
+    0x1f: (196, 126, 114), # some kind of dark pink (estimated)
     0x20: (255, 0, 0),
-    0x0e: (0, 0, 0),
+    0x21: (133, 0, 0), # some kind of dark red (estimated)
+    0x22: (201, 172, 138), # some kind of tan/skin (estimated)
+    0x24: (200, 160, 0),
+    0x28: (200, 0, 0),
+    0x29: (78, 41, 143), # see table
+    0x2b: (185, 185, 185), # some kind of grey (estimated)
+    0x2c: (0, 0, 0), # black (estimated)
+    0x2d: (125, 112, 2), # see table
+    0x2e: (2, 56, 34), # see table
+    0x32: (80, 84, 87), # see table
+    0x34: (198, 98, 0), # see table
+    0x35: (212, 165, 95), # see table
     0x37: (0, 0, 0),
-    0x01: (0, 0, 0),
-    0x0c: (0, 0, 160),
-    0x15: (174, 176, 214),
-    0x3e: (159, 213, 127),
-    0x0d: (225, 244, 92),
-    0x35: (206, 166, 97),
-    0x08: (150, 94, 169),
-    0x45: (186, 153, 0),
-    0x29: (78, 41, 146),
-    0x06: (49, 125, 34),
-    0x2d: (128, 110, 0),
-    0x05: (67, 87, 2),
-    0x2e: (0, 57, 37),
+    0x38: (140, 18, 55), # some kind of red (estimated)
+    0x3a: (105, 45, 4), # see table
+    0x3c: (0, 0, 255),
+    0x3e: (158, 214, 125), # see table
+    0x3f: (240, 77, 140), # see table
+    0x41: (194, 47, 75), # some kind of red (estimated)
+    0x43: (0, 150, 0), # see table
+    0x44: (255, 240, 142), # see table
+    0x45: (185, 153, 2), # see table
+    0x47: (88, 156, 83), # some kind of green (estimated)
+    0x48: (252, 179, 68), # see table
+    0x4d: (198, 190, 194), # see table
+    0x4e: (202, 156, 106), # some kind of tan/skin (estimated)
     }
 
 class Pattern:
@@ -126,21 +153,3 @@ class Pattern:
             sys.stderr.write("Failed to find colour 0x%02x (%i).\n" % (identifier, identifier))
         
         return colour
-
-
-if __name__ == "__main__":
-
-    if len(sys.argv) != 2:
-        sys.stderr.write("Usage: %s <JEF file>\n" % sys.argv[0])
-        sys.exit(1)
-    
-    app = QApplication(sys.argv)
-    scene = QGraphicsScene()
-    view = QGraphicsView()
-    view.setRenderHint(QPainter.Antialiasing)
-    view.setScene(scene)
-    view.show()
-    
-    p = Pattern(sys.argv[1])
-    p.show(scene)
-    sys.exit(app.exec_())
