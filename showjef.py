@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import struct, sys
+from PyQt4.QtCore import Qt
 from PyQt4.QtGui import *
 
 import jef
@@ -51,16 +52,18 @@ ColorTable = {
 
 class Convertor:
 
-    def __init__(self, path):
+    def __init__(self, path, stitches_only = False):
     
         self.jef = jef.Pattern(path)
+        self.stitches_only = stitches_only
     
     def show_coords(self, coords, pen, scene):
     
         mx, my = 0, 0
         for op, x, y in coords:
         
-            scene.addEllipse(x - 2, -y - 2, 4, 4, QPen(QColor(200,200,200)))
+            if not self.stitches_only:
+                scene.addEllipse(x - 2, -y - 2, 4, 4, QPen(QColor(200,200,200)))
             
             if op == "stitch":
                 scene.addLine(mx, -my, x, -y, pen)
@@ -79,19 +82,40 @@ class Convertor:
             i += 1
 
 
+class View(QGraphicsView):
+
+    def __init__(self):
+    
+        QGraphicsView.__init__(self)
+        self.setRenderHint(QPainter.Antialiasing)
+    
+    def resizeEvent(self, event):
+    
+        self.fitInView(self.scene().sceneRect(), Qt.KeepAspectRatio)
+    
+    def showEvent(self, event):
+    
+        self.fitInView(self.scene().sceneRect(), Qt.KeepAspectRatio)
+
+
 if __name__ == "__main__":
 
-    if len(sys.argv) != 2:
-        sys.stderr.write("Usage: %s <JEF file>\n" % sys.argv[0])
+    if not 2 <= len(sys.argv) <= 3:
+        sys.stderr.write("Usage: %s [--stitches-only] <JEF file>\n" % sys.argv[0])
         sys.exit(1)
+    
+    stitches_only = "--stitches-only" in sys.argv
+    if stitches_only:
+        sys.argv.remove("--stitches-only")
+    
+    jef_file = sys.argv[1]
     
     app = QApplication(sys.argv)
     scene = QGraphicsScene()
-    view = QGraphicsView()
-    view.setRenderHint(QPainter.Antialiasing)
+    view = View()
     view.setScene(scene)
     view.show()
     
-    convertor = Convertor(sys.argv[1])
+    convertor = Convertor(jef_file, stitches_only)
     convertor.show(scene)
     sys.exit(app.exec_())

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-jef2svg.py - Converts the contents of JEF files to SVG images.
+jef2png.py - Converts the contents of JEF files to PNG images.
 
 Copyright (C) 2009 David Boddie <david@boddie.org.uk>
 
@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os, struct, sys
-from PyQt4.QtCore import QRect, QT_VERSION
+from PyQt4.QtCore import QRect, Qt
 from PyQt4.QtGui import *
 from PyQt4.QtSvg import QSvgGenerator
 
@@ -44,6 +44,9 @@ class Convertor:
     
     def show(self, painter):
     
+        painter.save()
+        painter.translate(-self.bounding_rect().topLeft())
+        
         i = 0
         for i in range(self.jef.threads):
         
@@ -71,40 +74,48 @@ class Convertor:
                 painter.drawPath(path)
             
             i += 1
+        
+        painter.restore()
 
 
 if __name__ == "__main__":
 
-    if not 3 <= len(sys.argv) <= 4:
-        sys.stderr.write("Usage: %s [--stitches-only] <JEF file> <SVG file>\n" % sys.argv[0])
+    if not 4 <= len(sys.argv) <= 5:
+        sys.stderr.write("Usage: %s [--stitches-only] <dimensions> <JEF file> <SVG file>\n" % sys.argv[0])
         sys.exit(1)
     
     stitches_only = "--stitches-only" in sys.argv
     if stitches_only:
         sys.argv.remove("--stitches-only")
     
-    jef_file = sys.argv[1]
-    svg_file = sys.argv[2]
+    dimensions = sys.argv[1]
+    try:
+        width, height = map(int, dimensions.split("x"))
+        if width <= 0 or height <= 0:
+            raise ValueError
+    
+    except ValueError:
+        sys.stderr.write("Please specify the dimensions of the image as <width>x<height>.\n"
+                         "For example: 640x480\n")
+        sys.exit(1)
+    
+    jef_file = sys.argv[2]
+    png_file = sys.argv[3]
     
     app = QApplication(sys.argv)
-    svg = QSvgGenerator()
-    svg.setFileName(svg_file)
-    
-    if QT_VERSION >= (4, 5, 0):
-        svg.setDescription(
-            'Original JEF file "' + os.path.split(jef_file)[1] + '" converted '
-            'to ' + os.path.split(svg_file)[1] + ' by jef2svg.py.'
-            )
     
     convertor = Convertor(jef_file, stitches_only)
     rect = convertor.bounding_rect()
-    if QT_VERSION >= (4, 5, 0):
-        svg.setViewBox(rect)
-    svg.setSize(rect.size())
+    
+    image = QImage(rect.width(), rect.height(), QImage.Format_ARGB32)
+    image.fill(qRgba(0, 0, 0, 0))
     
     painter = QPainter()
-    painter.begin(svg)
+    painter.begin(image)
+    painter.setRenderHint(QPainter.Antialiasing)
     convertor.show(painter)
     painter.end()
     
+    image = image.scaled(width, height, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    image.save(png_file)
     sys.exit()
