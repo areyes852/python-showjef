@@ -57,6 +57,7 @@ ColorTable = {
     0x32: (80, 84, 87), # see table
     0x34: (198, 98, 0), # see table
     0x35: (212, 165, 95), # see table
+    0x36: (250, 127, 126), # see table
     0x37: (0, 0, 0),
     0x38: (140, 18, 55), # some kind of red (estimated)
     0x3a: (105, 45, 4), # see table
