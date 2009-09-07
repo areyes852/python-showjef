@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os, struct, sys
 from PyQt4.QtCore import QRect, Qt
 from PyQt4.QtGui import *
-from PyQt4.QtSvg import QSvgGenerator
 
 import jef
 
@@ -81,7 +80,7 @@ class Convertor:
 if __name__ == "__main__":
 
     if not 4 <= len(sys.argv) <= 5:
-        sys.stderr.write("Usage: %s [--stitches-only] <dimensions> <JEF file> <SVG file>\n" % sys.argv[0])
+        sys.stderr.write("Usage: %s [--stitches-only] <dimensions> <JEF file> <PNG file>\n" % sys.argv[0])
         sys.exit(1)
     
     stitches_only = "--stitches-only" in sys.argv
