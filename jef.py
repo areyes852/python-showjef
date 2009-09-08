@@ -86,6 +86,21 @@ class Pattern:
         
         # start + data_length should equal the file length.
         
+        flags = struct.unpack("<I", d[32:36])[0]
+        
+        # These are the width and height of the pattern. Information appears
+        # to be duplicated in most patterns, though sometimes there are
+        # differences of 1 unit between widths or heights.
+        
+        width1 = struct.unpack("<I", d[36:40])[0]
+        height1 = struct.unpack("<I", d[40:44])[0]
+        width2 = struct.unpack("<I", d[44:48])[0]
+        height2 = struct.unpack("<I", d[48:52])[0]
+        
+        if flags & 1 == 0:
+            # The 4 byte words from 68 to 74 should all be -1.
+            pass
+        
         self.date_time = None
         if struct.unpack("<I", d[4:8])[0] & 1:
             self.date_time = time.strptime(d[8:22], "%Y%m%d%H%M%S")
