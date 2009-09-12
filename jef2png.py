@@ -77,15 +77,34 @@ class Convertor:
         painter.restore()
 
 
+def read_argument(name, args):
+
+    matching = filter(lambda x: x.startswith(name), args)
+    value = False
+    
+    for item in matching:
+        args.remove(item)
+        if name.endswith("="):
+            value = item[len(name):]
+        else:
+            value = True
+    
+    return value
+
+
 if __name__ == "__main__":
 
-    if not 4 <= len(sys.argv) <= 5:
-        sys.stderr.write("Usage: %s [--stitches-only] <dimensions> <JEF file> <PNG file>\n" % sys.argv[0])
+    if not 4 <= len(sys.argv) <= 6:
+        sys.stderr.write("Usage: %s [--background=<colour>] [--stitches-only] <dimensions> <JEF file> <PNG file>\n" % sys.argv[0])
         sys.exit(1)
     
-    stitches_only = "--stitches-only" in sys.argv
-    if stitches_only:
-        sys.argv.remove("--stitches-only")
+    stitches_only = read_argument("--stitches-only", sys.argv)
+    background = read_argument("--background=", sys.argv)
+    if background is False:
+        background_colour = qRgba(0, 0, 0, 0)
+    else:
+        colour = QColor(background)
+        background_colour = qRgba(colour.red(), colour.green(), colour.blue(), colour.alpha())
     
     dimensions = sys.argv[1]
     try:
@@ -107,7 +126,7 @@ if __name__ == "__main__":
     rect = convertor.bounding_rect()
     
     image = QImage(rect.width(), rect.height(), QImage.Format_ARGB32)
-    image.fill(qRgba(0, 0, 0, 0))
+    image.fill(background_colour)
     
     painter = QPainter()
     painter.begin(image)
