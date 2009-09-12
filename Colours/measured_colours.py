@@ -1,10 +1,12 @@
 # Colour mappings found from various patterns.
 
 colours = {
-    0x20: ("red?", "#ff0000"),
     0x24: ("?", "#c8a000"),
     0x28: ("red?", "#ff0000"),
     0x3c: ("blue?", "#0000ff"),
+    # 0x07
+    # 0x19
+    # 0x1b
 }
 
 # Old colour table, kept for reference.
