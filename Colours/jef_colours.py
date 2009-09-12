@@ -14,7 +14,7 @@ colours = {}
 # looking up each code in the dictionaries mapping colour codes to known
 # colours.
 
-for group in internal_colours.groups.keys():
+for group in internal_colours.order:
 
     if known_colours.has_key(group):
     

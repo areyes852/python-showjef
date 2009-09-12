@@ -1,5 +1,12 @@
 # Internal Janome colour code to various thread codes.
 
+order = (
+  "Madeira Rayon",
+  "Sulky Rayon",
+  "Brother Embroidery",
+  "Isacord Polyester"
+  )
+
 groups = {
   "Brother Embroidery": {
     0x01: 900,
@@ -21,6 +28,7 @@ groups = {
     0x01: 1000,
     0x02: 1001,
     0x03: 1024,
+    0x04: 1278,
     0x05: 1393,
     0x06: 1170,
     0x08: 1032,
@@ -34,7 +42,7 @@ groups = {
     0x12: 1020,
     0x13: 1105,
     0x14: 1181,
-    0x15: 1232,
+    0x15: 1232, # also 1132
     0x17: 1001,
     0x18: 1360,
     0x1a: 1028,
@@ -42,10 +50,11 @@ groups = {
     0x1f: 1315,
     0x21: 1037,
     0x22: 1272,
+    0x26: 1232, # also 1116
     0x29: 1334,
     0x2a: 1147,
     0x2b: 1086,
-    0x2c: 1144,
+    0x2c: 1106,
     0x2d: 1194,
     0x2e: 1370,
     0x32: 1396,
@@ -65,6 +74,7 @@ groups = {
     0x45: 1196,
     0x46: 1025,
     0x48: 1155,
+    0x4c: 1335,
     0x4d: 1138,
     0x4e: 1055,
     
