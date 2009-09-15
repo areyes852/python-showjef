@@ -2,10 +2,6 @@
 
 colours = {
     0x24: ("?", "#c8a000"),
-    0x3c: ("blue?", "#0000ff"),
-    # 0x07
-    # 0x19
-    # 0x1b
 }
 
 # Old colour table, kept for reference.
