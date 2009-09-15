@@ -6,6 +6,7 @@ import all_colours
 import janome_colours
 import robison_rayon_colours
 import robison_polyester_colours
+import sulky_rayon_colours
 import measured_colours
 import internal_colours
 
@@ -13,6 +14,7 @@ known_colours = all_colours.groups
 known_colours.update(janome_colours.groups)
 known_colours.update(robison_rayon_colours.groups)
 known_colours.update(robison_polyester_colours.groups)
+known_colours.update(sulky_rayon_colours.groups)
 
 colours = {}
 
