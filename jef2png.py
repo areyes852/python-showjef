@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import os, struct, sys
+import os, sys
 from PyQt4.QtCore import QRect, Qt
 from PyQt4.QtGui import *
 
@@ -62,15 +62,13 @@ class Convertor:
             pen = QPen(colour)
             painter.setPen(pen)
             
-            path = QPainterPath()
+            mx, my = 0, 0
             for op, x, y in coordinates:
                 if op == "move":
-                    path.moveTo(x, -y)
+                    mx, my = x, y
                 elif op == "stitch":
-                    path.lineTo(x, -y)
-            
-            if path.elementCount() > 0:
-                painter.drawPath(path)
+                    painter.drawLine(mx, -my, x, -y)
+                    mx, my = x, y
             
             i += 1
         
@@ -94,17 +92,25 @@ def read_argument(name, args):
 
 if __name__ == "__main__":
 
-    if not 4 <= len(sys.argv) <= 6:
-        sys.stderr.write("Usage: %s [--background=<colour>] [--stitches-only] <dimensions> <JEF file> <PNG file>\n" % sys.argv[0])
+    if not 4 <= len(sys.argv) <= 7:
+        sys.stderr.write("Usage: %s [--background=<colour>] [--stitches-only] [--quality=high|low] <dimensions> <JEF file> <PNG file>\n" % sys.argv[0])
         sys.exit(1)
     
     stitches_only = read_argument("--stitches-only", sys.argv)
+    
     background = read_argument("--background=", sys.argv)
     if background is False:
         background_colour = qRgba(0, 0, 0, 0)
     else:
         colour = QColor(background)
         background_colour = qRgba(colour.red(), colour.green(), colour.blue(), colour.alpha())
+    
+    quality = read_argument("--quality=", sys.argv)
+    if quality is False:
+        quality = "high"
+    elif quality != "high" and quality != "low":
+        sys.stderr.write("Please specify either low or high quality.\n")
+        sys.exit(1)
     
     dimensions = sys.argv[1]
     try:
@@ -130,7 +136,8 @@ if __name__ == "__main__":
     
     painter = QPainter()
     painter.begin(image)
-    painter.setRenderHint(QPainter.Antialiasing)
+    if quality == "high":
+        painter.setRenderHint(QPainter.Antialiasing)
     convertor.show(painter)
     painter.end()
     
