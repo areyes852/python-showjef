@@ -88,7 +88,7 @@ class Convertor:
         if subzone_width < 100 or subzone_height < 100 or len(zone.lines) <= 10:
             return
         
-        zone.subzones = [
+        subzones = [
             Zone(QRect(zone.rect.x(), zone.rect.y(), subzone_width, subzone_height)),
             Zone(QRect(zone.rect.x() + subzone_width, zone.rect.y(), subzone_width, subzone_height)),
             Zone(QRect(zone.rect.x(), zone.rect.y() + subzone_height, subzone_width, subzone_height)),
@@ -98,7 +98,7 @@ class Convertor:
         lines = []
         
         for colour, line in zone.lines:
-            for subzone in zone.subzones:
+            for subzone in subzones:
                 # If a line is completely within a subzone, add it to the
                 # subzone and ignore all other subzones.
                 if subzone.rect.contains(line.p1()) and subzone.rect.contains(line.p2()):
@@ -111,8 +111,10 @@ class Convertor:
         
         zone.lines = lines
         
-        for subzone in zone.subzones:
-            self._partition_data(subzone)
+        for subzone in subzones:
+            if subzone.lines:
+                zone.subzones.append(subzone)
+                self._partition_data(subzone)
     
     def bounding_rect(self):
     
