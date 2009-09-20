@@ -31,13 +31,21 @@ class Convertor:
     
         self.jef = jef.Pattern(path)
         self.stitches_only = stitches_only
+        self.rect = QRect()
     
     def bounding_rect(self):
     
+        if not self.rect.isNull():
+            return self.rect
+        
         x, y = [], []
         for coordinates in self.jef.coordinates:
-            x.extend(map(lambda (op, i, j): i, coordinates))
-            y.extend(map(lambda (op, i, j): j, coordinates))
+            i = map(lambda (op, i, j): i, coordinates)
+            j = map(lambda (op, i, j): j, coordinates)
+            x.append(min(i))
+            x.append(max(i))
+            y.append(min(j))
+            y.append(max(j))
         
         return QRect(min(x), -max(y), max(x) - min(x), max(y) - min(y))
     
