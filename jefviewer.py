@@ -20,10 +20,122 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os, sys
-from PyQt4.QtCore import QRect, QSize, Qt, SIGNAL
+from PyQt4.QtCore import QLine, QRect, QSize, Qt, SIGNAL
 from PyQt4.QtGui import *
 
-from jef2png import Convertor
+import jef
+
+class Zone:
+
+    def __init__(self, rect):
+    
+        self.rect = rect
+        self.subzones = []
+        self.lines = []
+    
+    def within(self, rect):
+    
+        lines = []
+        if self.rect.intersects(rect):
+            lines.extend(self.lines)
+            for subzone in self.subzones:
+                lines.extend(subzone.within(rect))
+        
+        return lines
+
+class Convertor:
+
+    def __init__(self, path, stitches_only = False):
+    
+        self.jef = jef.Pattern(path)
+        self.stitches_only = stitches_only
+        self.rect = QRect()
+        self.zone = None
+        self._arrange_data()
+    
+    def _arrange_data(self):
+    
+        xb, yb = [], []
+        lines = []
+        for i in range(len(self.jef.coordinates)):
+            coordinates = self.jef.coordinates[i]
+            colour = QColor(*self.jef.colour_for_thread(i))
+            mx, my = 0, 0
+            for op, x, y in coordinates:
+                xb.append(x)
+                yb.append(y)
+                if op == "move":
+                    mx, my = x, y
+                elif op == "stitch":
+                    line = QLine(mx, -my, x, -y)
+                    lines.append((colour, line))
+                    mx, my = x, y
+            
+            xb = [min(xb), max(xb)]
+            yb = [min(yb), max(yb)]
+        
+        self.rect = QRect(min(xb), -max(yb), max(xb) - min(xb), max(yb) - min(yb))
+        
+        self.zone = Zone(self.rect)
+        self.zone.lines = lines
+        self._partition_data(self.zone)
+    
+    def _partition_data(self, zone):
+    
+        subzone_width = zone.rect.width()/2
+        subzone_height = zone.rect.height()/2
+        
+        if subzone_width < 100 or subzone_height < 100 or len(zone.lines) <= 10:
+            return
+        
+        zone.subzones = [
+            Zone(QRect(zone.rect.x(), zone.rect.y(), subzone_width, subzone_height)),
+            Zone(QRect(zone.rect.x() + subzone_width, zone.rect.y(), subzone_width, subzone_height)),
+            Zone(QRect(zone.rect.x(), zone.rect.y() + subzone_height, subzone_width, subzone_height)),
+            Zone(QRect(zone.rect.x() + subzone_width, zone.rect.y() + subzone_height, subzone_width, subzone_height))
+            ]
+        
+        lines = []
+        
+        for colour, line in zone.lines:
+            for subzone in zone.subzones:
+                # If a line is completely within a subzone, add it to the
+                # subzone and ignore all other subzones.
+                if subzone.rect.contains(line.p1()) and subzone.rect.contains(line.p2()):
+                    subzone.lines.append((colour, line))
+                    break
+            else:
+                # If a line is not completely within a zone, add it to the list
+                # of lines to keep in the zone.
+                lines.append((colour, line))
+        
+        zone.lines = lines
+        
+        for subzone in zone.subzones:
+            self._partition_data(subzone)
+    
+    def bounding_rect(self):
+    
+        return self.rect
+        
+    def show(self, painter, rect):
+    
+        # Transform the rectangle from window to pattern coordinates.
+        rect = rect.translated(self.rect.topLeft())
+        
+        lines = self.zone.within(rect)
+        
+        painter.save()
+        painter.translate(-self.bounding_rect().topLeft())
+        
+        for colour, line in lines:
+        
+            pen = QPen(colour)
+            painter.setPen(pen)
+            painter.drawLine(line)
+        
+        painter.restore()
+
 
 class Canvas(QWidget):
 
@@ -42,7 +154,9 @@ class Canvas(QWidget):
         #painter.setRenderHint(QPainter.Antialiasing)
         painter.fillRect(event.rect(), self.background)
         painter.scale(self.scale, self.scale)
-        painter.drawPicture(0, 0, self.picture)
+        if self.convertor:
+            rect = painter.transform().inverted()[0].mapRect(event.rect())
+            self.convertor.show(painter, rect)
         painter.end()
     
     def sizeHint(self):
@@ -56,11 +170,6 @@ class Canvas(QWidget):
     
         self.convertor = convertor
         self.resize(convertor.bounding_rect().size())
-        self.picture = QPicture()
-        painter = QPainter()
-        painter.begin(self.picture)
-        convertor.show(painter)
-        painter.end()
         self.update()
     
     def zoomIn(self):
