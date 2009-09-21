@@ -1,7 +1,7 @@
 # Internal Janome colour code to various thread codes.
 
 order = (
-  "Janome Acrylic",
+  "Janome",
   "Madeira Rayon",
   "Robison-Anton Rayon",
   "Sulky Rayon",
@@ -45,25 +45,35 @@ groups = {
     0x45: 546,
     0x48: 811,
   },
-  "Janome Acrylic": {
+  "Janome": {
     0x01: 2,
     0x02: 1,
     0x03: 239,
     0x06: 226,  # also 269
+    0x07: 232,
+    0x09: 201,
     0x0a: 202,
     0x0b: 236,
     0x0d: 3,
     0x0e: 2,
+    0x11: 211,
     0x15: 209,  # also 228
+    0x19: 227,
     0x1a: 207,  # also 230
+    0x1b: 229,
+    0x1e: 232,
     0x21: 202,
+    0x24: 238,
     0x26: 211,
     0x2a: 225,
     0x2c: 246,
     0x2d: 246,
     0x2e: 226,  # also 248
+    0x2f: 249,
+    0x33: 253,
     0x34: 235,
     0x35: 238,
+    0x47: 273,
     0x48: 274,
     0x4e: 224,
   },
