@@ -115,6 +115,6 @@ class Pattern:
             colour = jef_colours.colour(identifier)
         except KeyError:
             colour = (0, 0, 0)
-            sys.stderr.write("Failed to find colour 0x%02x (%i).\n" % (identifier, identifier))
+            sys.stderr.write("Thread %i: Failed to find colour 0x%02x (%i).\n" % (index, identifier, identifier))
         
         return colour
