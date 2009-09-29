@@ -30,6 +30,11 @@ class Pattern:
         d = open(path).read()
         start = struct.unpack("<I", d[:4])[0]
         data = d[start:]
+        
+        self.date_time = None
+        if struct.unpack("<I", d[4:8])[0] & 1:
+            self.date_time = time.strptime(d[8:22], "%Y%m%d%H%M%S")
+        
         self.threads = struct.unpack("<I", d[24:28])[0]
         data_length = struct.unpack("<I", d[28:32])[0]
         
@@ -37,30 +42,41 @@ class Pattern:
         
         flags = struct.unpack("<I", d[32:36])[0]
         
-        # These are the width and height of the pattern. Information appears
-        # to be duplicated in most patterns, though sometimes there are
-        # differences of 1 unit between widths or heights.
+        # flags == 0 (hoop size A: 126 x 110 mm)
+        # flags == 2 (hoop size B: 140 x 200 mm)
+        # flags == 1 (hoop size C: 50 x 50 mm)
         
-        width1 = struct.unpack("<I", d[36:40])[0]
-        height1 = struct.unpack("<I", d[40:44])[0]
-        width2 = struct.unpack("<I", d[44:48])[0]
-        height2 = struct.unpack("<I", d[48:52])[0]
+        # These are coordinates specifying rectangles for the pattern.
+        # It appears that the units are 0.2 mm.
+        self.rectangles = []
+        offset = 0x24
+        while offset < 0x74:
+        
+            x1 = struct.unpack("<i", d[offset:offset+4])[0]
+            y1 = struct.unpack("<i", d[offset+4:offset+8])[0]
+            x2 = struct.unpack("<i", d[offset+8:offset+12])[0]
+            y2 = struct.unpack("<i", d[offset+12:offset+16])[0]
+            
+            if x1 != -1 and y1 != -1 and x2 != -1 and y2 != -1:
+                self.rectangles.append((-x1, -y1, x2, y2))
+            offset += 16
         
         if flags & 1 == 0:
             # The 4 byte words from 68 to 74 should all be -1.
             pass
         
-        self.date_time = None
-        if struct.unpack("<I", d[4:8])[0] & 1:
-            self.date_time = time.strptime(d[8:22], "%Y%m%d%H%M%S")
-        
         # The colour table always seems to start at offset 0x74.
         self.colours = []
-        colours = (start - 0x74)/8
-        offset = 0x74
-        for i in range(colours):
-            self.colours.append(struct.unpack("<i", d[offset:offset+4])[0])
-            offset += 4
+        self.thread_types = []
+        
+        colour_offset = 0x74
+        thread_type_offset = 0x74 + (4 * self.threads)
+        for i in range(self.threads):
+        
+            self.colours.append(struct.unpack("<i", d[colour_offset:colour_offset+4])[0])
+            self.thread_types.append(struct.unpack("<i", d[thread_type_offset:thread_type_offset+4])[0])
+            colour_offset += 4
+            thread_type_offset += 4
         
         self.read_threads(data)
     
