@@ -256,6 +256,7 @@ class Viewer(QMainWindow):
     
     def openFile(self, path):
     
+        path = unicode(path)
         self.canvas.setRenderer(Renderer(path, self.stitches_only))
         self.path = path
     
