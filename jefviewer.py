@@ -20,25 +20,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os, sys
-from PyQt4.QtCore import QLine, QPoint, QRect, QSize, Qt, QVariant, SIGNAL, SLOT
+from PyQt4.QtCore import QLine, QObject, QPoint, QRect, QSize, Qt, QVariant, \
+                         SIGNAL, SLOT
 from PyQt4.QtGui import *
 
 import jef
 
 class Zone:
 
-    def __init__(self, rect, colour):
+    def __init__(self, rect, colour_item):
     
         self.rect = rect
-        self.colour = colour
+        self.colour_item = colour_item
         self.subzones = []
         self.lines = []
     
     def paint(self, painter):
     
-        pen = QPen(self.colour)
-        painter.setPen(pen)
-        painter.drawLines(self.lines)
+        if self.colour_item.isChecked():
+            pen = QPen(QColor(self.colour_item.colour()))
+            painter.setPen(pen)
+            painter.drawLines(self.lines)
     
     def paintWithin(self, painter, rect):
     
@@ -50,9 +52,10 @@ class Zone:
 
 class Renderer:
 
-    def __init__(self, pattern, stitches_only = False):
+    def __init__(self, pattern, colourModel, stitches_only = False):
     
         self.pattern = pattern
+        self.colourModel = colourModel
         self.stitches_only = stitches_only
         self.rect = QRect()
         self.zones = []
@@ -65,7 +68,7 @@ class Renderer:
         for i in range(len(self.pattern.coordinates)):
         
             coordinates = self.pattern.coordinates[i]
-            colour = QColor(*self.pattern.colour_for_thread(i))
+            colour_item = self.colourModel.item(i)
             
             lines = []
             xb, yb = [], []
@@ -86,7 +89,7 @@ class Renderer:
             rect = QRect(min(xb), -max(yb), max(xb) - min(xb), max(yb) - min(yb))
             self.rect = self.rect.united(rect)
             
-            zone = Zone(rect, colour)
+            zone = Zone(rect, colour_item)
             zone.lines = lines
             self._partition_data(zone)
             self.zones.append(zone)
@@ -100,10 +103,10 @@ class Renderer:
             return
         
         subzones = [
-            Zone(QRect(zone.rect.x(), zone.rect.y(), subzone_width, subzone_height), zone.colour),
-            Zone(QRect(zone.rect.x() + subzone_width, zone.rect.y(), subzone_width, subzone_height), zone.colour),
-            Zone(QRect(zone.rect.x(), zone.rect.y() + subzone_height, subzone_width, subzone_height), zone.colour),
-            Zone(QRect(zone.rect.x() + subzone_width, zone.rect.y() + subzone_height, subzone_width, subzone_height), zone.colour)
+            Zone(QRect(zone.rect.x(), zone.rect.y(), subzone_width, subzone_height), zone.colour_item),
+            Zone(QRect(zone.rect.x() + subzone_width, zone.rect.y(), subzone_width, subzone_height), zone.colour_item),
+            Zone(QRect(zone.rect.x(), zone.rect.y() + subzone_height, subzone_width, subzone_height), zone.colour_item),
+            Zone(QRect(zone.rect.x() + subzone_width, zone.rect.y() + subzone_height, subzone_width, subzone_height), zone.colour_item)
             ]
         
         lines = []
@@ -145,12 +148,14 @@ class Renderer:
 
 class Canvas(QWidget):
 
-    def __init__(self, parent = None):
+    def __init__(self, colourModel, parent = None):
     
         QWidget.__init__(self, parent)
+        
+        self.colourModel = colourModel
+        self.connect(colourModel, SIGNAL("colourChanged()"), self.update)
+        
         self.renderer = None
-        self.background = QBrush(Qt.white)
-        self.picture = QPicture()
         self.scale = 1.0
     
     def paintEvent(self, event):
@@ -158,7 +163,7 @@ class Canvas(QWidget):
         painter = QPainter()
         painter.begin(self)
         #painter.setRenderHint(QPainter.Antialiasing)
-        painter.fillRect(event.rect(), self.background)
+        painter.fillRect(event.rect(), self.colourModel.background)
         painter.scale(self.scale, self.scale)
         if self.renderer:
             rect = painter.transform().inverted()[0].mapRect(event.rect())
@@ -175,7 +180,7 @@ class Canvas(QWidget):
     def setRenderer(self, renderer):
     
         self.renderer = renderer
-        self.resize(renderer.bounding_rect().size())
+        self.resize(self.sizeHint())
         self.update()
     
     def zoomIn(self):
@@ -232,37 +237,111 @@ class CanvasView(QScrollArea):
             self.canvas.setCursor(Qt.OpenHandCursor)
 
 
-class ColourDockWidget(QDockWidget):
+class ColourItem(QStandardItem):
 
-    def __init__(self, parent = None):
+    def __init__(self, internal_colour):
     
-        QDockWidget.__init__(self, qApp.translate("ColourDockWidget", "Colours"), parent)
+        QStandardItem.__init__(self)
         
-        self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.internal_colour = internal_colour
         
+        colours = jef.jef_colours.colour_mappings[internal_colour]
+        thread_type, code = colours[0]
+        name, colour = jef.jef_colours.known_colours[thread_type][code]
+        
+        self.setText(QApplication.translate("ColourItem", u"%1: %2 (%3)").arg(code).arg(name, thread_type))
+        self.setData(QVariant(QColor(colour)), Qt.DecorationRole)
+        self.setData(QVariant(Qt.Checked), Qt.CheckStateRole)
+        self.setData(QVariant(0), Qt.UserRole)
+        self.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
+    
+    def colour(self):
+    
+        colours = jef.jef_colours.colour_mappings[self.internal_colour]
+        
+        # Use the value in the UserRole to determine which thread type to use.
+        thread_type, code = colours[self.data(Qt.UserRole).toInt()[0]]
+        name, colour = jef.jef_colours.known_colours[thread_type][code]
+        return colour
+    
+    def isChecked(self):
+    
+        return self.checkState() == Qt.Checked
+
+
+class ColourModel(QStandardItemModel):
+
+    def __init__(self, background):
+    
+        QStandardItemModel.__init__(self)
+        
+        self.background = background
         self.pattern = None
         
-        self.colourList = QListWidget()
-        self.setWidget(self.colourList)
+        self.connect(self, SIGNAL("itemChanged(QStandardItem *)"),
+                     self, SIGNAL("colourChanged()"))
+    
+    def setBackground(self, colour):
+    
+        self.background = colour
+        self.emit(SIGNAL("colourChanged()"))
     
     def setPattern(self, pattern):
     
         self.pattern = pattern
         
         # Update the colours in the list with those from the pattern.
-        self.colourList.clear()
+        self.clear()
+        
         for internal_colour in pattern.colours:
         
-            item = QListWidgetItem()
-            
-            colours = jef.jef_colours.colour_mappings[internal_colour]
-            thread_type, code = colours[0]
-            name, colour = jef.jef_colours.known_colours[thread_type][code]
-            item.setText(self.tr(u"%1: %2 (%3)").arg(code).arg(name, thread_type))
-            item.setData(Qt.DecorationRole, QVariant(QColor(colour)))
-            
-            item.setData(Qt.UserRole, QVariant(0))
-            self.colourList.addItem(item)
+            item = ColourItem(internal_colour)
+            self.appendRow(item)
+
+
+class ColourDockWidget(QDockWidget):
+
+    def __init__(self, colourModel, parent = None):
+    
+        QDockWidget.__init__(self, qApp.translate("ColourDockWidget", "&Colours"), parent)
+        
+        self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        
+        self.colourModel = colourModel
+        
+        colourList = QTreeView()
+        colourList.header().hide()
+        colourList.setRootIsDecorated(False)
+        colourList.setModel(self.colourModel)
+        
+        self.backgroundButton = QPushButton(self.tr("&Background Colour"))
+        self.connect(self.backgroundButton, SIGNAL("clicked()"), self.selectBackground)
+        self.setBackground(colourModel.background)
+        
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.addWidget(colourList)
+        layout.addWidget(self.backgroundButton)
+        
+        self.setWidget(widget)
+    
+    def selectBackground(self):
+    
+        colour = QColorDialog.getColor(self.colourModel.background, self)
+        if colour.isValid():
+            self.setBackground(colour)
+    
+    def setBackground(self, colour):
+    
+        icon_size = QApplication.style().pixelMetric(QStyle.PM_ButtonIconSize)
+        pixmap = QPixmap(icon_size, icon_size)
+        pixmap.fill(colour)
+        self.backgroundButton.setIcon(QIcon(pixmap))
+        self.colourModel.setBackground(colour)
+    
+    def setPattern(self, pattern):
+    
+        self.colourModel.setPattern(pattern)
 
 
 class Viewer(QMainWindow):
@@ -270,11 +349,14 @@ class Viewer(QMainWindow):
     def __init__(self, parent = None):
     
         QMainWindow.__init__(self, parent)
+        
+        # Pattern-related attributes
         self.stitches_only = True
         self.path = ""
         self.pattern = None
+        self.colourModel = ColourModel(QColor(Qt.white))
         
-        self.canvas = Canvas()
+        self.canvas = Canvas(self.colourModel)
         
         colourDockAction = self._create_colour_dock_widget()
         
@@ -304,7 +386,7 @@ class Viewer(QMainWindow):
     
     def _create_colour_dock_widget(self):
     
-        self.colourDockWidget = ColourDockWidget(self)
+        self.colourDockWidget = ColourDockWidget(self.colourModel, self)
         self.addDockWidget(Qt.RightDockWidgetArea, self.colourDockWidget)
         self.colourDockWidget.hide()
         return self.colourDockWidget.toggleViewAction()
@@ -313,9 +395,10 @@ class Viewer(QMainWindow):
     
         path = unicode(path)
         self.pattern = jef.Pattern(path)
-        self.canvas.setRenderer(Renderer(self.pattern, self.stitches_only))
+        
         self.path = path
         self.colourDockWidget.setPattern(self.pattern)
+        self.canvas.setRenderer(Renderer(self.pattern, self.colourModel, self.stitches_only))
         self.setWindowTitle(self.tr("%1 - Viewer for Janome Embroidery Files [*]").arg(path))
     
     def openFileDialog(self):
