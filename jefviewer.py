@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os, sys
-from PyQt4.QtCore import QLine, QRect, QSize, Qt, SIGNAL, SLOT
+from PyQt4.QtCore import QLine, QPoint, QRect, QSize, Qt, QVariant, SIGNAL, SLOT
 from PyQt4.QtGui import *
 
 import jef
@@ -50,9 +50,9 @@ class Zone:
 
 class Renderer:
 
-    def __init__(self, path, stitches_only = False):
+    def __init__(self, pattern, stitches_only = False):
     
-        self.jef = jef.Pattern(path)
+        self.pattern = pattern
         self.stitches_only = stitches_only
         self.rect = QRect()
         self.zones = []
@@ -62,10 +62,10 @@ class Renderer:
     
         self.rect = QRect()
         
-        for i in range(len(self.jef.coordinates)):
+        for i in range(len(self.pattern.coordinates)):
         
-            coordinates = self.jef.coordinates[i]
-            colour = QColor(*self.jef.colour_for_thread(i))
+            coordinates = self.pattern.coordinates[i]
+            colour = QColor(*self.pattern.colour_for_thread(i))
             
             lines = []
             xb, yb = [], []
@@ -199,6 +199,39 @@ class Canvas(QWidget):
         self.update()
 
 
+class CanvasView(QScrollArea):
+
+    def __init__(self, canvas, parent = None):
+    
+        QScrollArea.__init__(self, parent)
+        self.canvas = canvas
+        self.setWidget(canvas)
+        self.dragging = False
+        self.dragStartPos = QPoint()
+        canvas.setCursor(Qt.OpenHandCursor)
+    
+    def mousePressEvent(self, event):
+    
+        if event.button() == Qt.LeftButton:
+            self.canvas.dragging = True
+            self.canvas.setCursor(Qt.ClosedHandCursor)
+            self.dragStartPos = QPoint(event.pos())
+    
+    def mouseMoveEvent(self, event):
+    
+        if self.canvas.dragging:
+            change = event.pos() - self.dragStartPos
+            self.dragStartPos = QPoint(event.pos())
+            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - change.x())
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - change.y())
+    
+    def mouseReleaseEvent(self, event):
+    
+        if event.button() == Qt.LeftButton:
+            self.canvas.dragging = False
+            self.canvas.setCursor(Qt.OpenHandCursor)
+
+
 class ColourDockWidget(QDockWidget):
 
     def __init__(self, parent = None):
@@ -207,8 +240,29 @@ class ColourDockWidget(QDockWidget):
         
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         
+        self.pattern = None
+        
         self.colourList = QListWidget()
         self.setWidget(self.colourList)
+    
+    def setPattern(self, pattern):
+    
+        self.pattern = pattern
+        
+        # Update the colours in the list with those from the pattern.
+        self.colourList.clear()
+        for internal_colour in pattern.colours:
+        
+            item = QListWidgetItem()
+            
+            colours = jef.jef_colours.colour_mappings[internal_colour]
+            thread_type, code = colours[0]
+            name, colour = jef.jef_colours.known_colours[thread_type][code]
+            item.setText(self.tr(u"%1: %2 (%3)").arg(code).arg(name, thread_type))
+            item.setData(Qt.DecorationRole, QVariant(QColor(colour)))
+            
+            item.setData(Qt.UserRole, QVariant(0))
+            self.colourList.addItem(item)
 
 
 class Viewer(QMainWindow):
@@ -218,6 +272,7 @@ class Viewer(QMainWindow):
         QMainWindow.__init__(self, parent)
         self.stitches_only = True
         self.path = ""
+        self.pattern = None
         
         self.canvas = Canvas()
         
@@ -242,23 +297,26 @@ class Viewer(QMainWindow):
         self.toolsMenu = self.menuBar().addMenu(self.tr("&Tools"))
         self.toolsMenu.addAction(colourDockAction)
         
-        area = QScrollArea()
-        area.setWidget(self.canvas)
+        area = CanvasView(self.canvas)
+        area.setAlignment(Qt.AlignCenter)
         self.setCentralWidget(area)
         self.setWindowTitle(self.tr("Viewer for Janome Embroidery Files"))
     
     def _create_colour_dock_widget(self):
     
-        colourDockWidget = ColourDockWidget(self)
-        self.addDockWidget(Qt.RightDockWidgetArea, colourDockWidget)
-        colourDockWidget.hide()
-        return colourDockWidget.toggleViewAction()
+        self.colourDockWidget = ColourDockWidget(self)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.colourDockWidget)
+        self.colourDockWidget.hide()
+        return self.colourDockWidget.toggleViewAction()
     
     def openFile(self, path):
     
         path = unicode(path)
-        self.canvas.setRenderer(Renderer(path, self.stitches_only))
+        self.pattern = jef.Pattern(path)
+        self.canvas.setRenderer(Renderer(self.pattern, self.stitches_only))
         self.path = path
+        self.colourDockWidget.setPattern(self.pattern)
+        self.setWindowTitle(self.tr("%1 - Viewer for Janome Embroidery Files [*]").arg(path))
     
     def openFileDialog(self):
     

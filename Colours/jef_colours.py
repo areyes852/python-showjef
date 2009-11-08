@@ -17,6 +17,7 @@ known_colours.update(robison_polyester_colours.groups)
 known_colours.update(sulky_rayon_colours.groups)
 
 colours = {}
+colour_mappings = {}
 
 # Examine the dictionaries mapping internal colour codes to other colour codes,
 # looking up each code in the dictionaries mapping colour codes to known
@@ -30,6 +31,11 @@ for group in internal_colours.order:
         
         for internal_code, other_code in internal_colours.groups[group].items():
         
+            if not colours_dict.has_key(other_code):
+                continue
+            
+            colour_mappings.setdefault(internal_code, []).append((group, other_code))
+            
             if colours.has_key(internal_code):
                 continue
             
