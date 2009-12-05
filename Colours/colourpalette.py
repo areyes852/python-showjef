@@ -24,18 +24,20 @@ from PyQt4.QtCore import QLine, QObject, QPoint, QRect, QSize, Qt, QVariant, \
                          SIGNAL, SLOT
 from PyQt4.QtGui import *
 
-import jef_colours
+import colourmodels
 
 
 class ColourPalette(QDialog):
 
-    def __init__(self, colourModel, parent = None):
+    def __init__(self, parent = None):
     
         QDialog.__init__(self, parent)
         
-        self.colourView = QListView()
-        self.colourView.setModel(colourModel)
-        self.colourModel = colourModel
+        self.colourView = QTableView()
+        self.colourModel = colourmodels.ColourModel()
+        self.colourView.setModel(self.colourModel)
+        self.colourView.horizontalHeader().hide()
+        self.colourView.verticalHeader().hide()
         
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttonBox.accepted.connect(self.accept)
@@ -47,10 +49,26 @@ class ColourPalette(QDialog):
         
         self.setWindowTitle(self.tr("Colour Palette"))
     
-    def selectedColour(self):
+    def exec_(self, internal_colour, thread_offset):
+    
+        index = self.colourModel.getIndex(internal_colour, thread_offset)
+        self.colourView.selectionModel().setCurrentIndex(index,
+            QItemSelectionModel.ClearAndSelect)
+        
+        return QDialog.exec_(self)
+    
+    def selectedInternalColour(self):
     
         index = self.colourView.selectionModel().currentIndex()
         if index.isValid():
-            return self.colourModel.item(index)
+            return self.colourModel.internalColour(index)
+        else:
+            return None
+    
+    def selectedThreadOffset(self):
+    
+        index = self.colourView.selectionModel().currentIndex()
+        if index.isValid():
+            return self.colourModel.threadOffset(index)
         else:
             return None

@@ -247,7 +247,7 @@ class ColourDockWidget(QDockWidget):
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         
         self.colourModel = colourModel
-        self.colourPalette = colourpalette.ColourPalette(colourModel, self)
+        self.colourPalette = colourpalette.ColourPalette(self)
         
         colourList = QTreeView()
         colourList.header().hide()
@@ -269,10 +269,14 @@ class ColourDockWidget(QDockWidget):
     
     def editColour(self, index):
     
-        if self.colourPalette.exec_() == QDialog.Accepted:
-            colour = self.colourPalette.selectedColour()
-            if colour:
-                self.colourModel.setColour(index, colour)
+        item = self.colourModel.itemFromIndex(index)
+        
+        if self.colourPalette.exec_(item.internalColour(), item.threadOffset()) == QDialog.Accepted:
+        
+            colour = self.colourPalette.selectedInternalColour()
+            thread_offset = self.colourPalette.selectedThreadOffset()
+            if colour and thread_offset is not None:
+                item.setColour(colour, thread_offset)
     
     def selectBackground(self):
     
@@ -303,7 +307,7 @@ class Viewer(QMainWindow):
         self.stitches_only = True
         self.path = ""
         self.pattern = None
-        self.colourModel = colourmodels.ColourModel(QColor(Qt.white))
+        self.colourModel = colourmodels.PatternColourModel(QColor(Qt.white))
         
         self.canvas = Canvas(self.colourModel)
         
