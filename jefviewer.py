@@ -25,6 +25,7 @@ from PyQt4.QtCore import QLine, QObject, QPoint, QRect, QSize, Qt, QVariant, \
 from PyQt4.QtGui import *
 
 import jef
+from Colours import colourmodels, colourpalette
 
 class Zone:
 
@@ -237,68 +238,6 @@ class CanvasView(QScrollArea):
             self.canvas.setCursor(Qt.OpenHandCursor)
 
 
-class ColourItem(QStandardItem):
-
-    def __init__(self, internal_colour):
-    
-        QStandardItem.__init__(self)
-        
-        self.internal_colour = internal_colour
-        
-        colours = jef.jef_colours.colour_mappings[internal_colour]
-        thread_type, code = colours[0]
-        name, colour = jef.jef_colours.known_colours[thread_type][code]
-        
-        self.setText(QApplication.translate("ColourItem", u"%1: %2 (%3)").arg(code).arg(name, thread_type))
-        self.setData(QVariant(QColor(colour)), Qt.DecorationRole)
-        self.setData(QVariant(Qt.Checked), Qt.CheckStateRole)
-        self.setData(QVariant(0), Qt.UserRole)
-        self.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
-    
-    def colour(self):
-    
-        colours = jef.jef_colours.colour_mappings[self.internal_colour]
-        
-        # Use the value in the UserRole to determine which thread type to use.
-        thread_type, code = colours[self.data(Qt.UserRole).toInt()[0]]
-        name, colour = jef.jef_colours.known_colours[thread_type][code]
-        return colour
-    
-    def isChecked(self):
-    
-        return self.checkState() == Qt.Checked
-
-
-class ColourModel(QStandardItemModel):
-
-    def __init__(self, background):
-    
-        QStandardItemModel.__init__(self)
-        
-        self.background = background
-        self.pattern = None
-        
-        self.connect(self, SIGNAL("itemChanged(QStandardItem *)"),
-                     self, SIGNAL("colourChanged()"))
-    
-    def setBackground(self, colour):
-    
-        self.background = colour
-        self.emit(SIGNAL("colourChanged()"))
-    
-    def setPattern(self, pattern):
-    
-        self.pattern = pattern
-        
-        # Update the colours in the list with those from the pattern.
-        self.clear()
-        
-        for internal_colour in pattern.colours:
-        
-            item = ColourItem(internal_colour)
-            self.appendRow(item)
-
-
 class ColourDockWidget(QDockWidget):
 
     def __init__(self, colourModel, parent = None):
@@ -308,11 +247,14 @@ class ColourDockWidget(QDockWidget):
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         
         self.colourModel = colourModel
+        self.colourPalette = colourpalette.ColourPalette(colourModel, self)
         
         colourList = QTreeView()
         colourList.header().hide()
         colourList.setRootIsDecorated(False)
         colourList.setModel(self.colourModel)
+        
+        colourList.activated.connect(self.editColour)
         
         self.backgroundButton = QPushButton(self.tr("&Background Colour"))
         self.connect(self.backgroundButton, SIGNAL("clicked()"), self.selectBackground)
@@ -324,6 +266,13 @@ class ColourDockWidget(QDockWidget):
         layout.addWidget(self.backgroundButton)
         
         self.setWidget(widget)
+    
+    def editColour(self, index):
+    
+        if self.colourPalette.exec_() == QDialog.Accepted:
+            colour = self.colourPalette.selectedColour()
+            if colour:
+                self.colourModel.setColour(index, colour)
     
     def selectBackground(self):
     
@@ -354,7 +303,7 @@ class Viewer(QMainWindow):
         self.stitches_only = True
         self.path = ""
         self.pattern = None
-        self.colourModel = ColourModel(QColor(Qt.white))
+        self.colourModel = colourmodels.ColourModel(QColor(Qt.white))
         
         self.canvas = Canvas(self.colourModel)
         
@@ -396,10 +345,12 @@ class Viewer(QMainWindow):
         path = unicode(path)
         self.pattern = jef.Pattern(path)
         
+        qApp.setOverrideCursor(Qt.WaitCursor)
         self.path = path
         self.colourDockWidget.setPattern(self.pattern)
         self.canvas.setRenderer(Renderer(self.pattern, self.colourModel, self.stitches_only))
         self.setWindowTitle(self.tr("%1 - Viewer for Janome Embroidery Files [*]").arg(path))
+        qApp.restoreOverrideCursor()
     
     def openFileDialog(self):
     
