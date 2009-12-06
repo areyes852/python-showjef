@@ -271,12 +271,12 @@ class ColourDockWidget(QDockWidget):
     
         item = self.colourModel.itemFromIndex(index)
         
-        if self.colourPalette.exec_(item.internalColour(), item.threadOffset()) == QDialog.Accepted:
+        if self.colourPalette.exec_(item) == QDialog.Accepted:
         
             colour = self.colourPalette.selectedInternalColour()
-            thread_offset = self.colourPalette.selectedThreadOffset()
-            if colour and thread_offset is not None:
-                item.setColour(colour, thread_offset)
+            thread_type = self.colourPalette.selectedThreadType()
+            if colour and thread_type:
+                item.setColour(colour, thread_type)
     
     def selectBackground(self):
     
@@ -377,6 +377,6 @@ if __name__ == "__main__":
     if len(app.arguments()) > 1:
         window.openFile(app.arguments()[1])
     else:
-        window.resize(QDesktopWidget().availableGeometry().size() * 0.5)
+        window.resize(QDesktopWidget().availableGeometry().size() * 0.75)
     window.show()
     sys.exit(app.exec_())

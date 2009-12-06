@@ -36,8 +36,9 @@ class ColourPalette(QDialog):
         self.colourView = QTableView()
         self.colourModel = colourmodels.ColourModel()
         self.colourView.setModel(self.colourModel)
-        self.colourView.horizontalHeader().hide()
-        self.colourView.verticalHeader().hide()
+        self.colourView.setSelectionMode(QAbstractItemView.SingleSelection)
+        
+        self.colourView.activated.connect(self.accept)
         
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttonBox.accepted.connect(self.accept)
@@ -49,12 +50,14 @@ class ColourPalette(QDialog):
         
         self.setWindowTitle(self.tr("Colour Palette"))
     
-    def exec_(self, internal_colour, thread_offset):
+    def exec_(self, item):
     
-        index = self.colourModel.getIndex(internal_colour, thread_offset)
+        index = self.colourModel.getIndex(item.internalColour(), item.threadType())
+        
         self.colourView.selectionModel().setCurrentIndex(index,
             QItemSelectionModel.ClearAndSelect)
         
+        self.colourView.setFocus(Qt.ActiveWindowFocusReason)
         return QDialog.exec_(self)
     
     def selectedInternalColour(self):
@@ -65,10 +68,10 @@ class ColourPalette(QDialog):
         else:
             return None
     
-    def selectedThreadOffset(self):
+    def selectedThreadType(self):
     
         index = self.colourView.selectionModel().currentIndex()
         if index.isValid():
-            return self.colourModel.threadOffset(index)
+            return self.colourModel.threadType(index)
         else:
             return None

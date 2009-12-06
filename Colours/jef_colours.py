@@ -34,7 +34,7 @@ for group in internal_colours.order:
             if not colours_dict.has_key(other_code):
                 continue
             
-            colour_mappings.setdefault(internal_code, []).append((group, other_code))
+            colour_mappings.setdefault(internal_code, {})[group] = other_code
             
             if colours.has_key(internal_code):
                 continue

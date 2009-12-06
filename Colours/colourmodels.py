@@ -20,11 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os, sys
-from PyQt4.QtCore import QAbstractTableModel, Qt, QVariant, \
+from PyQt4.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant, \
                          SIGNAL, SLOT
 from PyQt4.QtGui import *
 
-import jef
+import jef_colours
 
 class PatternColourItem(QStandardItem):
 
@@ -33,42 +33,48 @@ class PatternColourItem(QStandardItem):
         QStandardItem.__init__(self)
         
         self.internal_colour = internal_colour
-        self.thread_offset = 0
-        self.setColour(internal_colour)
+        self._colours = jef_colours.colour_mappings[internal_colour]
+        
+        for thread_type in jef_colours.internal_colours.order:
+            if self._colours.has_key(thread_type):
+                self.thread_type = thread_type
+                break
+        else:
+            # We should never have an undefined thread type.
+            self.thread_type = None
+        
+        self.setColour(internal_colour, self.thread_type)
     
     def colour(self):
     
-        colours = jef.jef_colours.colour_mappings[self.internal_colour]
-        
-        # Use the value in the UserRole to determine which thread type to use.
-        thread_type, code = colours[self.data(Qt.UserRole).toInt()[0]]
-        name, colour = jef.jef_colours.known_colours[thread_type][code]
+        code = self._colours[self.thread_type]
+        name, colour = jef_colours.known_colours[self.thread_type][code]
         return colour
     
     def internalColour(self):
     
         return self.internal_colour
     
-    def threadOffset(self):
+    def threadType(self):
     
-        return self.thread_offset
+        return self.thread_type
     
     def isChecked(self):
     
         return self.checkState() == Qt.Checked
     
-    def setColour(self, internal_colour, thread_offset = 0):
+    def setColour(self, internal_colour, thread_type):
     
         self.internal_colour = internal_colour
-        self.thread_offset = thread_offset
-        colours = jef.jef_colours.colour_mappings[internal_colour]
-        thread_type, code = colours[thread_offset]
-        name, colour = jef.jef_colours.known_colours[thread_type][code]
+        self.thread_type = thread_type
+        self._colours = jef_colours.colour_mappings[internal_colour]
+        
+        code = self._colours[thread_type]
+        name, colour = jef_colours.known_colours[thread_type][code]
         
         self.setText(QApplication.translate("PatternColourItem", u"%1: %2 (%3)").arg(code).arg(name, thread_type))
         self.setData(QVariant(QColor(colour)), Qt.DecorationRole)
         self.setData(QVariant(Qt.Checked), Qt.CheckStateRole)
-        self.setData(QVariant(thread_offset), Qt.UserRole)
         self.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable | Qt.ItemIsSelectable)
 
 
@@ -119,29 +125,31 @@ class ColourItem:
     def __init__(self, internal_colour):
     
         self.internal_colour = internal_colour
+        self._colours = jef_colours.colour_mappings[internal_colour]
     
     def data(self, thread_type):
     
-        colours = jef.jef_colours.colour_mappings[self.internal_colour]
-        
-        # Use the current column value to determine which thread type to use.
-        thread_type, code = colours[thread_type]
-        return thread_type, code
+        code = self._colours[thread_type]
+        return code
+    
+    def hasThread(self, thread_type):
+    
+        return self._colours.has_key(thread_type)
     
     def colour(self, thread_type = None):
     
-        thread_type, code = self.data(thread_type)
-        name, colour = jef.jef_colours.known_colours[thread_type][code]
+        code = self.data(thread_type)
+        name, colour = jef_colours.known_colours[thread_type][code]
         return colour
     
-    def colourCount(self):
+    def colours(self):
     
-        return len(jef.jef_colours.colour_mappings[self.internal_colour])
+        return self._colours
     
     def name(self, thread_type = None):
     
-        thread_type, code = self.data(thread_type)
-        name, colour = jef.jef_colours.known_colours[thread_type][code]
+        code = self.data(thread_type)
+        name, colour = jef_colours.known_colours[thread_type][code]
         return name
 
 
@@ -157,15 +165,14 @@ class ColourModel(QAbstractTableModel):
         # Create a list of rows for the model, each containing the thread
         # colours which correspond to a given internal colour.
         self.colours = []
-        self.columns = 0
+        self.headers = list(jef_colours.internal_colours.order)
         
-        keys = jef.jef_colours.colour_mappings.keys()
+        keys = jef_colours.colour_mappings.keys()
         keys.sort()
         
         for internal_colour in keys:
         
             item = ColourItem(internal_colour)
-            self.columns = max(self.columns, item.colourCount())
             self.colours.append(item)
     
     def rowCount(self, parent):
@@ -180,7 +187,7 @@ class ColourModel(QAbstractTableModel):
         if parent.isValid():
             return -1
         else:
-            return self.columns
+            return len(self.headers)
     
     def data(self, index, role):
     
@@ -192,15 +199,43 @@ class ColourModel(QAbstractTableModel):
             return QVariant()
         
         item = self.colours[row]
-        if not 0 <= index.column() < item.colourCount():
+        if not 0 <= index.column() < len(self.headers):
             return QVariant()
         
-        if role == Qt.DisplayRole:
-            return QVariant(item.name(index.column()))
-        elif role == Qt.DecorationRole:
-            return QVariant(QColor(item.colour(index.column())))
-        else:
+        thread_type = self.headers[index.column()]
+        
+        try:
+            if role == Qt.DisplayRole:
+                return QVariant(item.name(thread_type))
+            elif role == Qt.DecorationRole:
+                return QVariant(QColor(item.colour(thread_type)))
+            else:
+                return QVariant()
+        except KeyError:
             return QVariant()
+    
+    def flags(self, index):
+    
+        if not index.isValid():
+            return Qt.NoItemFlags
+        
+        item = self.colours[index.row()]
+        thread_type = self.headers[index.column()]
+        
+        if item.hasThread(thread_type):
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        else:
+            return Qt.NoItemFlags
+    
+    def headerData(self, section, orientation, role):
+    
+        if role != Qt.DisplayRole:
+            return QVariant()
+        
+        if orientation == Qt.Vertical:
+            return QVariant(self.colours[section].internal_colour)
+        else:
+            return QVariant(self.headers[section])
     
     def internalColour(self, index):
     
@@ -209,20 +244,22 @@ class ColourModel(QAbstractTableModel):
         item = self.colours[index.row()]
         return item.internal_colour
     
-    def threadOffset(self, index):
+    def threadType(self, index):
     
-        """Returns the thread offset of the colour represented by the given index."""
-        return index.column()
+        """Returns the thread type of the colour represented by the given index."""
+        return self.headers[index.column()]
     
-    def getIndex(self, internal_colour, thread_offset):
+    def getIndex(self, internal_colour, thread_type):
     
         row = 0
         for item in self.colours:
         
             if item.internal_colour == internal_colour:
-                if 0 <= thread_offset < item.colourCount():
-                    return self.createIndex(row, thread_offset)
-                else:
+            
+                try:
+                    column = self.headers.index(thread_type)
+                    return self.createIndex(row, column)
+                except ValueError:
                     return QModelIndex()
             
             row += 1
