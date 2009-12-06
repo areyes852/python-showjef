@@ -155,6 +155,7 @@ class Canvas(QWidget):
         
         self.colourModel = colourModel
         self.connect(colourModel, SIGNAL("colourChanged()"), self.update)
+        self.connect(colourModel, SIGNAL("backgroundChanged()"), self.update)
         
         self.renderer = None
         self.scale = 1.0
@@ -258,7 +259,7 @@ class ColourDockWidget(QDockWidget):
         
         self.backgroundButton = QPushButton(self.tr("&Background Colour"))
         self.connect(self.backgroundButton, SIGNAL("clicked()"), self.selectBackground)
-        self.setBackground(colourModel.background)
+        self._set_background_button_colour(colourModel.background)
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -286,11 +287,15 @@ class ColourDockWidget(QDockWidget):
     
     def setBackground(self, colour):
     
+        self._set_background_button_colour(colour)
+        self.colourModel.setBackground(colour)
+    
+    def _set_background_button_colour(self, colour):
+    
         icon_size = QApplication.style().pixelMetric(QStyle.PM_ButtonIconSize)
         pixmap = QPixmap(icon_size, icon_size)
         pixmap.fill(colour)
         self.backgroundButton.setIcon(QIcon(pixmap))
-        self.colourModel.setBackground(colour)
     
     def setPattern(self, pattern):
     
@@ -308,15 +313,21 @@ class Viewer(QMainWindow):
         self.path = ""
         self.pattern = None
         self.colourModel = colourmodels.PatternColourModel(QColor(Qt.white))
+        self.connect(self.colourModel, SIGNAL("colourChanged()"), self.setModified)
         
         self.canvas = Canvas(self.colourModel)
         
         colourDockAction = self._create_colour_dock_widget()
         
         self.fileMenu = self.menuBar().addMenu(self.tr("&File"))
+        
         openAction = self.fileMenu.addAction(self.tr("&Open"))
         openAction.setShortcut(QKeySequence.Open)
         self.connect(openAction, SIGNAL("triggered()"), self.openFileDialog)
+        
+        saveAsAction = self.fileMenu.addAction(self.tr("Save &As..."))
+        self.connect(saveAsAction, SIGNAL("triggered()"), self.saveFileDialog)
+        
         quitAction = self.fileMenu.addAction(self.tr("E&xit"))
         quitAction.setShortcut(self.tr("Ctrl+Q"))
         self.connect(quitAction, SIGNAL("triggered()"), self.close)
@@ -335,7 +346,7 @@ class Viewer(QMainWindow):
         area = CanvasView(self.canvas)
         area.setAlignment(Qt.AlignCenter)
         self.setCentralWidget(area)
-        self.setWindowTitle(self.tr("Viewer for Janome Embroidery Files"))
+        self.setWindowTitle(self.tr("Viewer for Janome Embroidery Files [*]"))
     
     def _create_colour_dock_widget(self):
     
@@ -366,6 +377,35 @@ class Viewer(QMainWindow):
         
         if path:
             self.openFile(path)
+    
+    def saveFile(self, path):
+    
+        path = unicode(path)
+        
+        qApp.setOverrideCursor(Qt.WaitCursor)
+        saved = self.pattern.save(path)
+        qApp.restoreOverrideCursor()
+        
+        if saved:
+            self.setWindowModified(False)
+            self.path = path
+        else:
+            QMessageBox.warning(self, self.tr("Failed to save file."))
+    
+    def saveFileDialog(self):
+    
+        path = unicode(
+            QFileDialog.getSaveFileName(
+                self, self.tr("Save File"), os.path.split(self.path)[0],
+                self.tr("Janome Embroidery Files (*.jef *.JEF)"))
+            )
+        
+        if path:
+            self.saveFile(path)
+    
+    def setModified(self):
+    
+        self.setWindowModified(True)
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ class Pattern:
 
     def __init__(self, path):
     
-        d = open(path).read()
+        self._data = d = open(path).read()
         start = struct.unpack("<I", d[:4])[0]
         data = d[start:]
         
@@ -79,6 +79,21 @@ class Pattern:
             thread_type_offset += 4
         
         self.read_threads(data)
+    
+    def save(self, path):
+    
+        try:
+            open(path, "w").write(self._data)
+            return True
+        except IOError:
+            return False
+    
+    def set_colour(self, index, code):
+    
+        if 0 <= index < self.threads:
+        
+            offset = 0x74 + (index * 4)
+            self._data = self._data[:offset] + struct.pack("<i", code) + self._data[offset + 4:]
     
     def read_threads(self, data):
     

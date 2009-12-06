@@ -89,17 +89,12 @@ class PatternColourModel(QStandardItemModel):
         
         self.connect(self, SIGNAL("itemChanged(QStandardItem *)"),
                      self, SIGNAL("colourChanged()"))
+        self.itemChanged.connect(self.updatePattern)
     
     def setBackground(self, colour):
     
         self.background = colour
-        self.emit(SIGNAL("colourChanged()"))
-    
-    def setColour(self, index, colour):
-    
-        item = self.itemFromIndex(index)
-        item.setColour(colour)
-        self.itemChanged.emit(item)
+        self.emit(SIGNAL("backgroundChanged()"))
     
     def setPattern(self, pattern):
     
@@ -112,6 +107,10 @@ class PatternColourModel(QStandardItemModel):
         
             item = PatternColourItem(internal_colour)
             self.appendRow(item)
+    
+    def updatePattern(self, item):
+    
+        self.pattern.set_colour(item.row(), item.internalColour())
 
 
 class ColourItem:
