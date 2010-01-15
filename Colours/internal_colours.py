@@ -189,3 +189,27 @@ groups = {
     0x48: 1238,
   },
 }
+
+def convert_to_csv(path):
+
+    import csv
+    
+    f = open(path, "w")
+    w = csv.writer(f)
+    w.writerow(("Internal",) + order)
+    
+    rows = map(lambda x: [x], range(0x50))
+    
+    for group in order:
+    
+        colours = groups[group]
+        for row in rows:
+    
+            i = row[0]
+            colour = colours.get(i, "")
+            row.append(colour)
+    
+    for row in rows:
+        w.writerow(row)
+    
+    f.close()
