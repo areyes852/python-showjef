@@ -35,7 +35,7 @@ class PatternColourItem(QStandardItem):
         self.internal_colour = internal_colour
         self._colours = jef_colours.colour_mappings[internal_colour]
         
-        for thread_type in jef_colours.internal_colours.order:
+        for thread_type in jef_colours.colour_groups:
             if self._colours.has_key(thread_type):
                 self.thread_type = thread_type
                 break
@@ -164,7 +164,7 @@ class ColourModel(QAbstractTableModel):
         # Create a list of rows for the model, each containing the thread
         # colours which correspond to a given internal colour.
         self.colours = []
-        self.headers = list(jef_colours.internal_colours.order)
+        self.headers = list(jef_colours.colour_groups)
         
         keys = jef_colours.colour_mappings.keys()
         keys.sort()
