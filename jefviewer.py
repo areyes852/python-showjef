@@ -133,7 +133,13 @@ class Renderer:
     
     def bounding_rect(self):
     
-        return self.rect
+        if self.pattern.hoop_size:
+            return QRect(-10*self.pattern.hoop_size[0]/2.0,
+                         -10*self.pattern.hoop_size[1]/2.0,
+                         10*self.pattern.hoop_size[0],
+                         10*self.pattern.hoop_size[1])
+        else:
+            return self.rect
         
     def paint(self, painter, rect):
     
@@ -142,6 +148,14 @@ class Renderer:
         
         painter.save()
         painter.translate(-self.bounding_rect().topLeft())
+        
+        if self.pattern.hoop_size:
+            painter.setPen(QPen(Qt.black))
+            painter.drawRect(-10*self.pattern.hoop_size[0]/2.0,
+                             -10*self.pattern.hoop_size[1]/2.0,
+                             10*self.pattern.hoop_size[0],
+                             10*self.pattern.hoop_size[1])
+        
         for zone in self.zones:
             zone.paintWithin(painter, rect)
         painter.restore()
