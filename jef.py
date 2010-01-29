@@ -40,11 +40,27 @@ class Pattern:
         
         # start + data_length should equal the file length.
         
-        flags = struct.unpack("<I", d[32:36])[0]
+        hoop_code = struct.unpack("<I", d[32:36])[0]
         
-        # flags == 0 (hoop size A: 126 x 110 mm)
-        # flags == 2 (hoop size B: 140 x 200 mm)
-        # flags == 1 (hoop size C: 50 x 50 mm)
+        # Determine the hoop size in millimetres.
+        if hoop_code == 0:
+            self.hoop_size = (126, 110)
+            self.hoop_name = "A"
+        elif hoop_code == 1:
+            self.hoop_size = (50, 50)
+            self.hoop_name = "C"
+        elif hoop_code == 2:
+            self.hoop_size = (140, 200)
+            self.hoop_name = "B"
+        elif hoop_code == 3:
+            self.hoop_size = (126, 110)
+            self.hoop_name = "F"
+        elif hoop_code == 4:
+            self.hoop_size = (230, 200)
+            self.hoop_name = "D"
+        else:
+            self.hoop_size = None
+            self.hoop_name = None
         
         # These are coordinates specifying rectangles for the pattern.
         # It appears that the units are 0.2 mm.
@@ -61,7 +77,7 @@ class Pattern:
                 self.rectangles.append((-x1, -y1, x2, y2))
             offset += 16
         
-        if flags & 1 == 0:
+        if hoop_code & 1 == 0:
             # The 4 byte words from 68 to 74 should all be -1.
             pass
         
