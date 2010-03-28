@@ -144,7 +144,7 @@ class Renderer:
     def paint(self, painter, rect):
     
         # Transform the rectangle from window to pattern coordinates.
-        rect = rect.translated(self.rect.topLeft())
+        rect = rect.translated(self.bounding_rect().topLeft())
         
         painter.save()
         painter.translate(-self.bounding_rect().topLeft())
