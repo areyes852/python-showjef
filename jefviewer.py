@@ -269,7 +269,8 @@ class ColourDockWidget(QDockWidget):
         colourList.setRootIsDecorated(False)
         colourList.setModel(self.colourModel)
         
-        colourList.activated.connect(self.editColour)
+        self.connect(colourList, SIGNAL("activated(QModelIndex)"),
+                     self.editColour)
         
         self.backgroundButton = QPushButton(self.tr("&Background Colour"))
         self.connect(self.backgroundButton, SIGNAL("clicked()"), self.selectBackground)

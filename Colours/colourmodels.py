@@ -72,7 +72,7 @@ class PatternColourItem(QStandardItem):
         code = self._colours[thread_type]
         name, colour = jef_colours.known_colours[thread_type][code]
         
-        self.setText(QApplication.translate("PatternColourItem", u"%1: %2 (%3)").arg(code).arg(name, thread_type))
+        self.setText(QApplication.translate("PatternColourItem", "%1: %2 (%3)").arg(code).arg(name, thread_type))
         self.setData(QVariant(QColor(colour)), Qt.DecorationRole)
         self.setData(QVariant(Qt.Checked), Qt.CheckStateRole)
         self.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable | Qt.ItemIsSelectable)
@@ -89,7 +89,8 @@ class PatternColourModel(QStandardItemModel):
         
         self.connect(self, SIGNAL("itemChanged(QStandardItem *)"),
                      self, SIGNAL("colourChanged()"))
-        self.itemChanged.connect(self.updatePattern)
+        self.connect(self, SIGNAL("itemChanged(QStandardItem *)"),
+                     self.updatePattern)
     
     def setBackground(self, colour):
     
@@ -224,7 +225,7 @@ class ColourModel(QAbstractTableModel):
         if item.hasThread(thread_type):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         else:
-            return Qt.NoItemFlags
+            return Qt.ItemFlags(Qt.ItemFlag(0)) # Qt.NoItemFlags
     
     def headerData(self, section, orientation, role):
     

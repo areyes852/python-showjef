@@ -38,11 +38,11 @@ class ColourPalette(QDialog):
         self.colourView.setModel(self.colourModel)
         self.colourView.setSelectionMode(QAbstractItemView.SingleSelection)
         
-        self.colourView.activated.connect(self.accept)
+        self.connect(self.colourView, SIGNAL("activated()"), self.accept)
         
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttonBox.accepted.connect(self.accept)
-        buttonBox.rejected.connect(self.reject)
+        self.connect(buttonBox, SIGNAL("accepted()"), self.accept)
+        self.connect(buttonBox, SIGNAL("rejected()"), self.reject)
         
         layout = QVBoxLayout(self)
         layout.addWidget(self.colourView)
