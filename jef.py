@@ -25,7 +25,20 @@ from Colours import jef_colours
 
 class Pattern:
 
-    def __init__(self, path):
+    def __init__(self, path = None):
+    
+        if path:
+            self.load(path)
+        else:
+            self.threads = 0
+            self.hoop_size = (126, 110)
+            self.hoop_name = "A"
+            self.rectangles = []
+            self.colours = []
+            self.thread_types = []
+            self.coordinates = []
+    
+    def load(self, path):
     
         self._data = d = open(path).read()
         start = struct.unpack("<I", d[:4])[0]
@@ -98,6 +111,57 @@ class Pattern:
     
     def save(self, path):
     
+        self.threads = len(self.coordinates)
+        thread_data = self.write_threads()
+        start = 0x74 + (4 * self.threads)
+        
+        self._data = ""
+        self._data += struct.pack("<I", start)  # data offset
+        self._data += struct.pack("<I", 1)      # date-time flag
+        if hasattr(self, "date_time"):
+            self._data += time.strftime("%Y%m%d%H%M%S", self.date_time)
+        else:
+            self._data += time.strftime("%Y%m%d%H%M%S", time.localtime())
+        self._data += "\x00\x00"
+        
+        self._data += struct.pack("<I", self.threads)
+        self._data += struct.pack("<I", start + len(thread_data))
+        
+        if self.hoop_name == "A":
+            self._data += struct.pack("<I", 0)
+        elif self.hoop_name == "C":
+            self._data += struct.pack("<I", 1)
+        elif self.hoop_name == "B":
+            self._data += struct.pack("<I", 2)
+        elif self.hoop_name == "F":
+            self._data += struct.pack("<I", 3)
+        elif self.hoop_name == "D":
+            self._data += struct.pack("<I", 4)
+        else:
+            self._data += struct.pack("<I", 0)
+        
+        for x1, y1, x2, y2 in self.rectangles:
+        
+            if len(self._data) < 0x74:
+            
+                self._data += struct.pack("<i", -x1)
+                self._data += struct.pack("<i", -y1)
+                self._data += struct.pack("<i", x2)
+                self._data += struct.pack("<i", y2)
+        
+        # Fill the gap between the end of the rectangle list and the colour
+        # table.
+        while len(self._data) < 0x74:
+            self._data += struct.pack("<i", -1)
+        
+        for i in range(self.threads):
+            self._data += struct.pack("<i", self.colours[i])
+        
+        for i in range(self.threads):
+            self._data += struct.pack("<i", self.thread_types[i])
+        
+        self._data += thread_data
+        
         try:
             open(path, "w").write(self._data)
             return True
@@ -125,7 +189,8 @@ class Pattern:
             if data[i:i+2] == "\x80\x01":
                 # Starting a new thread. Record the coordinates already read
                 # and skip the next two bytes.
-                self.coordinates.append(coordinates)
+                if coordinates:
+                    self.coordinates.append(coordinates)
                 coordinates = []
                 first = True
                 i += 4
@@ -137,7 +202,8 @@ class Pattern:
                 first = True
             elif data[i:i+2] == "\x80\x10":
                 # End of data.
-                self.coordinates.append(coordinates)
+                if coordinates:
+                    self.coordinates.append(coordinates)
                 break
             else:
                 command = "stitch"
@@ -165,3 +231,32 @@ class Pattern:
             sys.stderr.write("Thread %i: Failed to find colour 0x%02x (%i).\n" % (index, identifier, identifier))
         
         return colour
+    
+    def write_threads(self):
+    
+        thread_data = ""
+        
+        cx, cy = 0, 0
+        first = True
+        
+        for coordinates in self.coordinates:
+        
+            if not first:
+                thread_data += "\x80\x01"
+                thread_data += "\x00\x00"
+                first = False
+            
+            for command, x, y in coordinates:
+            
+                if command == "move":
+                
+                    thread_data += "\x80\x02"
+                
+                thread_data += struct.pack("<b", x - cx)
+                thread_data += struct.pack("<b", y - cy)
+                
+                cx = x
+                cy = y
+        
+        thread_data += "\x80\x10"
+        return thread_data
