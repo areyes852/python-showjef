@@ -113,7 +113,7 @@ class Pattern:
     
         self.threads = len(self.coordinates)
         thread_data = self.write_threads()
-        start = 0x74 + (4 * self.threads)
+        start = 0x74 + (8 * self.threads)
         
         self._data = ""
         self._data += struct.pack("<I", start)  # data offset
@@ -170,10 +170,7 @@ class Pattern:
     
     def set_colour(self, index, code):
     
-        if 0 <= index < self.threads:
-        
-            offset = 0x74 + (index * 4)
-            self._data = self._data[:offset] + struct.pack("<i", code) + self._data[offset + 4:]
+        self.colours[index] = code
     
     def read_threads(self, data):
     
