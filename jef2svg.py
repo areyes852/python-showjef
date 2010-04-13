@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-jef2svg.py - Converts the contents of JEF files to SVG images.
+jef2svg.py - Converts the contents of JEF files to SVG drawings.
 
 Copyright (C) 2009 David Boddie <david@boddie.org.uk>
 
