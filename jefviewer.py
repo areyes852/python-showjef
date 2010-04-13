@@ -251,6 +251,26 @@ class CanvasView(QScrollArea):
         if event.button() == Qt.LeftButton:
             self.canvas.dragging = False
             self.canvas.setCursor(Qt.OpenHandCursor)
+    
+    def _zoom(self, method):
+    
+        xScroll = self.horizontalScrollBar().value() + self.horizontalScrollBar().pageStep()/2
+        yScroll = self.verticalScrollBar().value() + self.verticalScrollBar().pageStep()/2
+        fx = float(xScroll)/self.canvas.width()
+        fy = float(yScroll)/self.canvas.height()
+        
+        method()
+        
+        self.horizontalScrollBar().setValue(
+            fx * self.canvas.width() - self.horizontalScrollBar().pageStep()/2)
+        self.verticalScrollBar().setValue(
+            fy * self.canvas.height() - self.verticalScrollBar().pageStep()/2)
+        
+    def zoomIn(self):
+        self._zoom(self.canvas.zoomIn)
+    
+    def zoomOut(self):
+        self._zoom(self.canvas.zoomOut)
 
 
 class ColourDockWidget(QDockWidget):
@@ -347,20 +367,21 @@ class Viewer(QMainWindow):
         quitAction.setShortcut(self.tr("Ctrl+Q"))
         self.connect(quitAction, SIGNAL("triggered()"), self.close)
         
+        self.area = CanvasView(self.canvas)
+        self.area.setAlignment(Qt.AlignCenter)
+        
         self.viewMenu = self.menuBar().addMenu(self.tr("&View"))
         zoomInAction = self.viewMenu.addAction(self.tr("Zoom &In"))
         zoomInAction.setShortcut(QKeySequence.ZoomIn)
-        self.connect(zoomInAction, SIGNAL("triggered()"), self.canvas.zoomIn)
+        self.connect(zoomInAction, SIGNAL("triggered()"), self.area.zoomIn)
         zoomOutAction = self.viewMenu.addAction(self.tr("Zoom &Out"))
         zoomOutAction.setShortcut(QKeySequence.ZoomOut)
-        self.connect(zoomOutAction, SIGNAL("triggered()"), self.canvas.zoomOut)
+        self.connect(zoomOutAction, SIGNAL("triggered()"), self.area.zoomOut)
         
         self.toolsMenu = self.menuBar().addMenu(self.tr("&Tools"))
         self.toolsMenu.addAction(colourDockAction)
         
-        area = CanvasView(self.canvas)
-        area.setAlignment(Qt.AlignCenter)
-        self.setCentralWidget(area)
+        self.setCentralWidget(self.area)
         self.setWindowTitle(self.tr("Viewer for Janome Embroidery Files [*]"))
     
     def _create_colour_dock_widget(self):
@@ -404,6 +425,7 @@ class Viewer(QMainWindow):
         if saved:
             self.setWindowModified(False)
             self.path = path
+            self.setWindowTitle(self.tr("%1 - Viewer for Janome Embroidery Files [*]").arg(path))
         else:
             QMessageBox.warning(self, self.tr("Failed to save file."))
     
