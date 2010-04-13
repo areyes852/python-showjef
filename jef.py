@@ -241,10 +241,11 @@ class Pattern:
         
         for coordinates in self.coordinates:
         
-            if not first:
+            if first:
+                first = False
+            else:
                 thread_data += "\x80\x01"
                 thread_data += "\x00\x00"
-                first = False
             
             for command, x, y in coordinates:
             
