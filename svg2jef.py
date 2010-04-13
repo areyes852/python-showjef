@@ -106,6 +106,14 @@ class PathReader(QXmlStreamReader):
                     if path:
                         paths.append(path)
                         path = []
+        
+        if arg:
+            args.append(float(arg))
+            arg = u""
+            if len(args) == arg_number:
+                path.append((op, args))
+                args = []
+        
         if path:
             paths.append(path)
         
@@ -203,11 +211,11 @@ if __name__ == "__main__":
                 dy = (y - cy)/d * 127.0
                 cx += dx
                 cy += dy
-                coordinates.append((command, int(cx), int(cy)))
+                coordinates.append((command, int(cx), int(-cy)))
             
             if cx != x or cy != y:
                 cx, cy = x, y
-                coordinates.append((command, int(cx), int(cy)))
+                coordinates.append((command, int(cx), int(-cy)))
         
         if coordinates:
             pattern.coordinates.append(coordinates)
