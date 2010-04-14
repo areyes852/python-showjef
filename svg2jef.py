@@ -78,7 +78,7 @@ class PathReader(QXmlStreamReader):
         arg_number = 0
         
         for c in data:
-            if c in u"0123456789.":
+            if c in u"-0123456789.":
                 arg += c
             else:
                 if arg:
@@ -206,12 +206,15 @@ if __name__ == "__main__":
             d = max(abs(x - cx), abs(y - cy))
             n = int(d / 127.0)
             
-            for i in range(n):
+            if n > 0:
+            
                 dx = (x - cx)/d * 127.0
                 dy = (y - cy)/d * 127.0
-                cx += dx
-                cy += dy
-                coordinates.append((command, int(cx), int(-cy)))
+                
+                for i in range(n):
+                    cx += dx
+                    cy += dy
+                    coordinates.append((command, int(cx), int(-cy)))
             
             if cx != x or cy != y:
                 cx, cy = x, y
