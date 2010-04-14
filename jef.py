@@ -244,11 +244,29 @@ class Pattern:
                 thread_data += "\x80\x01"
                 thread_data += "\x00\x00"
             
+            # When finishing move operations, we need to add a normal stitch
+            # with zero x and y values.
+            zero_stitched = False
+            
             for command, x, y in coordinates:
             
                 if command == "move":
+                    # Some thread data includes two move operations to the same
+                    # point, so we only write the move command when there is
+                    # movement.
+                    if x != cx or y != cy:
+                        thread_data += "\x80\x02"
+                        zero_stitched = False
+                    else:
+                        zero_stitched = True
                 
-                    thread_data += "\x80\x02"
+                elif not zero_stitched:
+                
+                    # Ensure that each move is followed by a zero length
+                    # stitch if it has not already been written.
+                    thread_data += struct.pack("<b", 0)
+                    thread_data += struct.pack("<b", 0)
+                    zero_stitched = True
                 
                 thread_data += struct.pack("<b", x - cx)
                 thread_data += struct.pack("<b", y - cy)
