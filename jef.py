@@ -140,6 +140,21 @@ class Pattern:
         else:
             self._data += struct.pack("<I", 0)
         
+        if not self.rectangles:
+        
+            # Add a bounding rectangle to the output if no rectangles are
+            # specified.
+            xmin, xmax, ymin, ymax = [], [], [], []
+            for coordinates in self.coordinates:
+                x = map(lambda (command, x, y): x, coordinates)
+                y = map(lambda (command, x, y): -y, coordinates)
+                xmin.append(min(x))
+                xmax.append(max(x))
+                ymin.append(min(y))
+                ymax.append(max(y))
+            
+            self.rectangles.append((min(xmin), min(ymin), max(xmax), max(ymax)))
+        
         for x1, y1, x2, y2 in self.rectangles:
         
             if len(self._data) < 0x74:
