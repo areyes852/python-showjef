@@ -78,7 +78,7 @@ class PathReader(QXmlStreamReader):
         arg_number = 0
         
         for c in data:
-            if c in u"-0123456789.":
+            if c in u"-0123456789.e":
                 arg += c
             else:
                 if arg:
@@ -156,13 +156,14 @@ if __name__ == "__main__":
                 internal_code = inverse_mappings.get((group, colour_code), 2)
                 colours[rgb] = internal_code
     
+    cx, cy = 0, 0
+    
     for style, path in paths:
     
         rgb = style.get(u"stroke", u"#000000").upper()
         internal_code = colours.get(rgb, 2)
         
         coordinates = []
-        cx, cy = 0, 0
         
         for op, args in path:
         
