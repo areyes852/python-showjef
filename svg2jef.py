@@ -226,6 +226,19 @@ if __name__ == "__main__":
             pattern.colours.append(internal_code)
             pattern.thread_types.append(13)
     
+    
+    # Translate the pattern to be centred about the origin.
+    x1, y1, x2, y2 = pattern.bounding_rect()
+    dx = -(x2 - x1)/2 - x1
+    dy = -(y2 - y1)/2 - y1
+    
+    for coordinates in pattern.coordinates:
+    
+        for i in range(len(coordinates)):
+        
+            command, x, y = coordinates[i]
+            coordinates[i] = (command, x + dx, y + dy)
+    
     pattern.save(jef_file)
     
     sys.exit()
