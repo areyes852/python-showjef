@@ -125,7 +125,7 @@ class Pattern:
         self._data += "\x00\x00"
         
         self._data += struct.pack("<I", self.threads)
-        self._data += struct.pack("<I", start + len(thread_data))
+        self._data += struct.pack("<I", len(thread_data))
         
         if self.hoop_name == "A":
             self._data += struct.pack("<I", 0)
