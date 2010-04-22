@@ -49,7 +49,7 @@ class Pattern:
             self.date_time = time.strptime(d[8:22], "%Y%m%d%H%M%S")
         
         self.threads = struct.unpack("<I", d[24:28])[0]
-        data_length = struct.unpack("<I", d[28:32])[0]
+        data_length = struct.unpack("<I", d[28:32])[0] * 2
         
         # start + data_length should equal the file length.
         
@@ -125,7 +125,7 @@ class Pattern:
         self._data += "\x00\x00"
         
         self._data += struct.pack("<I", self.threads)
-        self._data += struct.pack("<I", len(thread_data))
+        self._data += struct.pack("<I", len(thread_data)/2)
         
         if self.hoop_name == "A":
             self._data += struct.pack("<I", 0)
