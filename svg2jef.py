@@ -202,24 +202,9 @@ if __name__ == "__main__":
             else:
                 continue
             
-            # If one or both dimensions are greater than the maximum stitch
-            # length then split the line into pieces.
-            d = max(abs(x - cx), abs(y - cy))
-            n = int(d / 127.0)
-            
-            if n > 0:
-            
-                dx = (x - cx)/d * 127.0
-                dy = (y - cy)/d * 127.0
-                
-                for i in range(n):
-                    cx += dx
-                    cy += dy
-                    coordinates.append((command, int(cx), int(-cy)))
-            
-            if cx != x or cy != y:
-                cx, cy = x, y
-                coordinates.append((command, int(cx), int(-cy)))
+            cx, cy = x, y
+            # Store the coordinates using the pattern's coordinate system.
+            coordinates.append((command, int(cx), int(-cy)))
         
         if coordinates:
             pattern.coordinates.append(coordinates)
@@ -232,12 +217,42 @@ if __name__ == "__main__":
     dx = -(x2 - x1)/2 - x1
     dy = -(y2 - y1)/2 - y1
     
+    cx, cy = 0, 0
+    
     for coordinates in pattern.coordinates:
     
-        for i in range(len(coordinates)):
+        i = 0
+        while i < len(coordinates):
         
             command, x, y = coordinates[i]
-            coordinates[i] = (command, x + dx, y + dy)
+            x += dx
+            y += dy
+            
+            # If one or both dimensions are greater than the maximum stitch
+            # length then split the line into pieces.
+            d = max(abs(x - cx), abs(y - cy))
+            n = (d / 127.0)
+            
+            if n > 1:
+            
+                xs = float(x - cx)/n
+                ys = float(y - cy)/n
+                
+                # Insert moves/stitches at intermediate positions.
+                j = 1
+                while j < n:
+                    px = cx + (j * xs)
+                    py = cy + (j * ys)
+                    coordinates.insert(i, (command, int(px), int(py)))
+                    i += 1
+                    j += 1
+                
+                cx, cy = px, py
+            
+            # Update the original coordinate.
+            coordinates[i] = (command, int(x), int(y))
+            cx, cy = x, y
+            i += 1
     
     pattern.save(jef_file)
     
