@@ -122,12 +122,19 @@ class PathReader(QXmlStreamReader):
 
 if __name__ == "__main__":
 
-    if not 2 <= len(sys.argv) <= 3:
-        sys.stderr.write("Usage: %s <SVG file> <JEF file>\n" % sys.argv[0])
+    if not 2 <= len(sys.argv) <= 4:
+        sys.stderr.write("Usage: %s [maximum stitch length (JEF units)] <SVG file> <JEF file>\n" % sys.argv[0])
         sys.exit(1)
     
-    svg_file = sys.argv[1]
-    jef_file = sys.argv[2]
+    elif len(sys.argv) == 4:
+        max_stitch_length = min(127.0, max(1.0, float(sys.argv[1])))
+        svg_file = sys.argv[2]
+        jef_file = sys.argv[3]
+    
+    else:
+        max_stitch_length = 127.0
+        svg_file = sys.argv[1]
+        jef_file = sys.argv[2]
     
     app = QCoreApplication(sys.argv)
     
@@ -225,18 +232,18 @@ if __name__ == "__main__":
         while i < len(coordinates):
         
             command, x, y = coordinates[i]
-            x += dx
-            y += dy
+            x = int(x + dx)
+            y = int(y + dy)
             
             # If one or both dimensions are greater than the maximum stitch
             # length then split the line into pieces.
             d = max(abs(x - cx), abs(y - cy))
-            n = (d / 127.0)
+            n = (d / max_stitch_length)
             
             if n > 1:
             
-                xs = float(x - cx)/n
-                ys = float(y - cy)/n
+                xs = max(-max_stitch_length, min(float(x - cx)/n, max_stitch_length))
+                ys = max(-max_stitch_length, min(float(y - cy)/n, max_stitch_length))
                 
                 # Insert moves/stitches at intermediate positions.
                 j = 1
@@ -250,7 +257,7 @@ if __name__ == "__main__":
                 cx, cy = px, py
             
             # Update the original coordinate.
-            coordinates[i] = (command, int(x), int(y))
+            coordinates[i] = (command, x, y)
             cx, cy = x, y
             i += 1
     
