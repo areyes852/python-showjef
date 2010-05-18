@@ -52,13 +52,17 @@ ColorTable = {
 
 class Convertor:
 
-    def __init__(self, path, stitches_only = False):
+    def __init__(self, path, stitches_only = False, show_jumps = False):
     
         self.jef = jef.Pattern(path)
         self.stitches_only = stitches_only
+        self.show_jumps = show_jumps
+        self.move_pen = QPen()
+        self.move_pen.setStyle(Qt.DotLine)
     
     def show_coords(self, coords, pen, scene):
     
+        first = True
         mx, my = 0, 0
         for op, x, y in coords:
         
@@ -67,8 +71,11 @@ class Convertor:
             
             if op == "stitch":
                 scene.addLine(mx, -my, x, -y, pen)
+            elif self.show_jumps and not first:
+                scene.addLine(mx, -my, x, -y, self.move_pen)
             
             mx, my = x, y
+            first = False
     
     def show(self, scene):
     
@@ -108,6 +115,10 @@ if __name__ == "__main__":
     if stitches_only:
         sys.argv.remove("--stitches-only")
     
+    show_jumps = "--show-jumps" in sys.argv
+    if show_jumps:
+        sys.argv.remove("--show-jumps")
+    
     jef_file = sys.argv[1]
     
     app = QApplication(sys.argv)
@@ -116,6 +127,6 @@ if __name__ == "__main__":
     view.setScene(scene)
     view.show()
     
-    convertor = Convertor(jef_file, stitches_only)
+    convertor = Convertor(jef_file, stitches_only, show_jumps)
     convertor.show(scene)
     sys.exit(app.exec_())
