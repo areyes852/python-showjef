@@ -127,7 +127,7 @@ if __name__ == "__main__":
         sys.exit(1)
     
     elif len(sys.argv) == 4:
-        max_stitch_length = min(127.0, max(1.0, float(sys.argv[1])))
+        max_stitch_length = min(max(1.0, float(sys.argv[1])), 127.0)
         svg_file = sys.argv[2]
         jef_file = sys.argv[3]
     
