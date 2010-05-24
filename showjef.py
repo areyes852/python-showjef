@@ -71,8 +71,11 @@ class Convertor:
             
             if op == "stitch":
                 scene.addLine(mx, -my, x, -y, pen)
-            elif self.show_jumps and not first:
-                scene.addLine(mx, -my, x, -y, self.move_pen)
+            elif self.show_jumps:
+                if first:
+                    scene.addLine(mx, -my, x, -y, QPen(Qt.DashLine))
+                else:
+                    scene.addLine(mx, -my, x, -y, self.move_pen)
             
             mx, my = x, y
             first = False
